@@ -1,0 +1,35 @@
+# Episodes and heavy production footage
+episodes/
+
+# Binaries, runtimes & third-party tools
+*.exe
+*.dll
+*.node
+*.pak
+*.pack
+iwn-brand-kit/tools/
+
+# Archives & Large backups
+*.zip
+*.tar*
+*.7z
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Temp files
+*.tmp
+*.tmp-*
+*.bak*
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

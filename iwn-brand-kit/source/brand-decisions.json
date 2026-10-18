@@ -1,0 +1,35 @@
+{
+  "approved_thumbnail_system": [],
+  "retired": [
+    "thumbnail-storm-demo",
+    "thumbnail-overlay-editable"
+  ],
+  "live_badge": "Red pill beside circular IWN logo",
+  "demo_source": {
+    "title": "NEW MEXICO HIT by Severe Flooding \u2013 Hatch Evacuated, Major Highway Closed (Latest Updates)",
+    "url": "https://www.youtube.com/watch?v=Ui4ojN24Bg8",
+    "headline": "NEW MEXICO / FLOODING"
+  },
+  "date": "2026-10-03",
+  "thumbnail_revision_3": {
+    "date": "2026-10-04",
+    "status": "four color options awaiting selection",
+    "layout": "86% photo, small circular badge, slim single-line bottom headline",
+    "variants": [
+      "red",
+      "green",
+      "blue",
+      "iwn"
+    ],
+    "supersedes": [
+      "thumbnail-rain-selected",
+      "thumbnail-heat-selected"
+    ]
+  },
+  "current_thumbnail_direction": {
+    "date": "2026-10-05",
+    "layout": "bold full-width headline, yellow emergency ribbon, larger branding",
+    "status": "awaiting user selection",
+    "folder": "thumbnails-impact"
+  }
+}

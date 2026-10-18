@@ -1,0 +1,758 @@
+{
+  "$schema": "https://jerboa.dev/schemas/fx-composition/editable/v1/document.schema.json",
+  "composition": {
+    "dynamics": {
+      "entries": [
+        {
+          "animator": {
+            "layerTimeJsCode": "return 510-input.time.seconds*75;",
+            "type": "jsScript"
+          },
+          "target": {
+            "kind": "layer",
+            "layerId": 3,
+            "propertyType": "positionX"
+          }
+        }
+      ]
+    },
+    "id": "main",
+    "layers": [
+      {
+        "blendMode": "normal",
+        "id": 100,
+        "layers": [
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 12,
+            "name": "Signature red dot",
+            "parent": 100,
+            "rect": {
+              "fillColor": [
+                0.9372549019607844,
+                0.20392156862745095,
+                0.2392156862745098,
+                1.0
+              ],
+              "fillEnabled": true,
+              "position": [
+                0.0,
+                0.0
+              ],
+              "roundness": 5.2778761061946895,
+              "size": [
+                10.55575221238938,
+                10.55575221238938
+              ],
+              "strokeEnabled": false,
+              "strokeWidth": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                77.08008849557523,
+                941.44
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Rect"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 11,
+            "name": "IWN vector letters",
+            "parent": 100,
+            "shape": {
+              "fills": [
+                {
+                  "blendMode": "normal",
+                  "fillRule": "nonZeroWinding",
+                  "opacity": 1.0,
+                  "paint": {
+                    "color": [
+                      0.9607843137254902,
+                      0.9490196078431372,
+                      0.9215686274509804,
+                      1.0
+                    ],
+                    "type": "solid"
+                  }
+                }
+              ],
+              "path": {
+                "commands": [
+                  {
+                    "type": "moveTo",
+                    "x": 0.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 23.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 23.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 0.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 0.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "close"
+                  },
+                  {
+                    "type": "moveTo",
+                    "x": 32.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 54.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 64.0,
+                    "y": 76.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 76.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 96.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 108.0,
+                    "y": 76.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 119.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 141.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 121.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 98.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 86.0,
+                    "y": 65.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 75.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 52.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 32.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "close"
+                  },
+                  {
+                    "type": "moveTo",
+                    "x": 152.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 152.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 174.0,
+                    "y": 35.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 174.0,
+                    "y": 43.0
+                  },
+                  {
+                    "c1x": 190.0,
+                    "c1y": 25.0,
+                    "c2x": 226.0,
+                    "c2y": 30.0,
+                    "type": "cubicTo",
+                    "x": 226.0,
+                    "y": 63.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 226.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 203.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 203.0,
+                    "y": 65.0
+                  },
+                  {
+                    "c1x": 203.0,
+                    "c1y": 48.0,
+                    "c2x": 175.0,
+                    "c2y": 48.0,
+                    "type": "cubicTo",
+                    "x": 175.0,
+                    "y": 66.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 175.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "lineTo",
+                    "x": 152.0,
+                    "y": 100.0
+                  },
+                  {
+                    "type": "close"
+                  }
+                ]
+              }
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                77.3,
+                941.44
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                43.98230088495575,
+                43.98230088495575
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Shape"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 10,
+            "name": "IWN circle",
+            "parent": 100,
+            "rect": {
+              "fillColor": [
+                0.09019607843137256,
+                0.09803921568627452,
+                0.11372549019607844,
+                1.0
+              ],
+              "fillEnabled": true,
+              "position": [
+                0.0,
+                0.0
+              ],
+              "roundness": 71.0,
+              "size": [
+                142.0,
+                142.0
+              ],
+              "strokeEnabled": false,
+              "strokeWidth": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                56.0,
+                896.0
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Rect"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 6,
+            "name": "Demo status",
+            "parent": 100,
+            "sourceText": {
+              "allCaps": false,
+              "applyFill": true,
+              "applyStroke": false,
+              "baselineShift": 0.0,
+              "boxText": false,
+              "fillColor": [
+                0.9372549019607844,
+                0.20392156862745095,
+                0.2392156862745098,
+                1.0
+              ],
+              "fontFamily": "Manrope ExtraLight",
+              "fontSize": 18.0,
+              "fontStyle": "Bold",
+              "justification": "left",
+              "strokeOverFill": false,
+              "strokeWidth": 0.0,
+              "text": "DEMO UPDATE",
+              "tracking": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                225.0,
+                1010.0
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Text"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 5,
+            "name": "Ticker label",
+            "parent": 100,
+            "sourceText": {
+              "allCaps": false,
+              "applyFill": true,
+              "applyStroke": false,
+              "baselineShift": 0.0,
+              "boxText": false,
+              "fillColor": [
+                0.9607843137254902,
+                0.9490196078431372,
+                0.9215686274509804,
+                1.0
+              ],
+              "fontFamily": "Manrope ExtraLight",
+              "fontSize": 27.0,
+              "fontStyle": "Bold",
+              "justification": "left",
+              "strokeOverFill": false,
+              "strokeWidth": 0.0,
+              "text": "WEATHER",
+              "tracking": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                224.0,
+                981.0
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Text"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 4,
+            "name": "Fixed label backing",
+            "parent": 100,
+            "rect": {
+              "fillColor": [
+                0.09019607843137256,
+                0.09803921568627452,
+                0.11372549019607844,
+                1.0
+              ],
+              "fillEnabled": true,
+              "position": [
+                0.0,
+                0.0
+              ],
+              "roundness": 0.0,
+              "size": [
+                490.0,
+                102.0
+              ],
+              "strokeEnabled": false,
+              "strokeWidth": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                0.0,
+                934.0
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Rect"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 3,
+            "name": "Editable scrolling copy",
+            "parent": 100,
+            "sourceText": {
+              "allCaps": false,
+              "applyFill": true,
+              "applyStroke": false,
+              "baselineShift": 0.0,
+              "boxText": false,
+              "fillColor": [
+                0.9607843137254902,
+                0.9490196078431372,
+                0.9215686274509804,
+                1.0
+              ],
+              "fontFamily": "Manrope ExtraLight",
+              "fontSize": 31.0,
+              "fontStyle": "Bold",
+              "justification": "left",
+              "strokeOverFill": false,
+              "strokeWidth": 0.0,
+              "text": "DEMO  /  WEATHER UPDATE     •     Replace with verified location, forecast and time     •     DEMO  /  WEATHER UPDATE     •     Replace with verified location, forecast and time     •     DEMO  /  WEATHER UPDATE     •     Replace with verified location, forecast and time     •     DEMO  /  WEATHER UPDATE     •     Replace with verified location, forecast and time     •     ",
+              "tracking": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                510.0,
+                995.0
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Text"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 2,
+            "name": "Red rule",
+            "parent": 100,
+            "rect": {
+              "fillColor": [
+                0.9372549019607844,
+                0.20392156862745095,
+                0.2392156862745098,
+                1.0
+              ],
+              "fillEnabled": true,
+              "position": [
+                0.0,
+                0.0
+              ],
+              "roundness": 0.0,
+              "size": [
+                1920.0,
+                4.0
+              ],
+              "strokeEnabled": false,
+              "strokeWidth": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                0.0,
+                930.0
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Rect"
+          },
+          {
+            "activeRange": {
+              "duration": 12000,
+              "start": 0
+            },
+            "blendMode": "normal",
+            "id": 1,
+            "name": "Ticker background",
+            "parent": 100,
+            "rect": {
+              "fillColor": [
+                0.09019607843137256,
+                0.09803921568627452,
+                0.11372549019607844,
+                1.0
+              ],
+              "fillEnabled": true,
+              "position": [
+                0.0,
+                0.0
+              ],
+              "roundness": 0.0,
+              "size": [
+                1920.0,
+                106.0
+              ],
+              "strokeEnabled": false,
+              "strokeWidth": 0.0
+            },
+            "transform": {
+              "anchorPoint": [
+                0.0,
+                0.0
+              ],
+              "opacity": 100.0,
+              "orientation": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "position": [
+                0.0,
+                930.0
+              ],
+              "rotation": 0.0,
+              "rotationX": 0.0,
+              "rotationY": 0.0,
+              "scale": [
+                100.0,
+                100.0
+              ],
+              "skew": 0.0,
+              "skewAxis": 0.0
+            },
+            "type": "Rect"
+          }
+        ],
+        "name": "IWN overlay - export this group for alpha",
+        "playback": {
+          "inputOffsetMs": 0,
+          "inputRange": {
+            "duration": 12000,
+            "start": 0
+          },
+          "mapping": {
+            "input": {
+              "duration": 12000,
+              "start": 0
+            },
+            "output": {
+              "duration": 12000,
+              "start": 0
+            },
+            "type": "linear"
+          },
+          "type": "windowed"
+        },
+        "transform": {
+          "anchorPoint": [
+            0.0,
+            0.0
+          ],
+          "opacity": 100.0,
+          "orientation": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "position": [
+            0.0,
+            0.0
+          ],
+          "rotation": 0.0,
+          "rotationX": 0.0,
+          "rotationY": 0.0,
+          "scale": [
+            100.0,
+            100.0
+          ],
+          "skew": 0.0,
+          "skewAxis": 0.0
+        },
+        "type": "Group"
+      }
+    ],
+    "name": "Main"
+  },
+  "dimensions": {
+    "height": 1080,
+    "width": 1920
+  },
+  "duration": 12.0,
+  "formatVersion": 1
+}

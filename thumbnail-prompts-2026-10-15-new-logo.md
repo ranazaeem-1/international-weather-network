@@ -1,0 +1,6 @@
+# User-supplied uppercase IWN logo
+
+Built-in image_gen edits applied to Montana and Chile v4. New approved thumbnail logo: uppercase white IWN with cyan accents on red, supplied by user and saved at iwn-brand-kit/IWN-white-cyan-on-red-user-logo.png. Supersedes lowercase iwn/black dot for these thumbnails. PNG masters and 1280x720 JPG exports saved in episode delivery folders.
+
+## Prompt
+Precise logo substitution. Image1 is thumbnail edit target. Image2 is user's exact new logo artwork: uppercase white IWN with cyan diagonal accents on I upperleft, W upperright stroke and N lower diagonal, on red. Replace old lowercase iwn and black dot ONLY in top-left panel of image1 with the exact uppercase white-and-cyan IWN artwork from image2. Remove black dot completely. Crop away excessive red margins from supplied logo then fit wordmark large, centered, about90% of existing panel width with original aspect ratio, no stretching. Keep existing red panel dimensions, flush upperleft placement and rounded bottom-right corner. Match source logo's letter shapes, cyan placements and proportions faithfully. Preserve everything outside logo panel: entire photo, headline, LIVE, red left border and rounded top-right headline corner. No other changes.

@@ -15,7 +15,7 @@ def dur(p):
 
 
 bad = 0
-_fd = "_framed" if R.EDL.get("lang", "en") == "en" else "_framed_" + R.EDL["lang"]   # must match build_capcut.framed
+_fd = "_framed" if R.EDL.get("framed_lang", "en") == "en" else "_framed_" + R.EDL["framed_lang"]   # must match build_capcut.framed
 for d in {(R.EP / rel).parent / _fd for rel in R.EDL["media"].values()}:
     for f in d.glob("*.mp4"):
         m = re.search(r"_s(\d+)-(\d+)(\.part)?\.mp4$", f.name)

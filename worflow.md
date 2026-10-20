@@ -71,12 +71,14 @@ Existing motion assets:
 
 The English and Spanish channels now have different names. Everything else (logo, colours, lower-thirds, ticker, layout) stays the same.
 
+**Spanish versions (user, 20 Oct 2026):** when an English video is converted to Spanish, translate the narration (plus the lower-third and ticker text), shuffle the clip placement, and build the draft. There is no separate logo framing: the English framed clips and the lowercase iwn logo are reused as they are.
+
 | | English channel | Spanish channel |
 |---|---|---|
 | Name in the subscribe animation | **Independent Weather Network** | **Instant Weather Network** |
 | Subscribe file | `motion/subscribe-en-transparent.mov` | `motion/subscribe-es-transparent.mov` |
 | Background / side-bar watermark | lowercase `iwn` logo (unchanged) | **`IWN` in capital letters** |
-| Pipeline setting | `E.build(..., lang="en")` (default) · `make_watermark.py <graphics>` | `E.build(..., lang="es")` · `make_watermark.py <graphics> --lang es` |
+| Pipeline setting | `E.build(..., lang="en")` (default) · `make_watermark.py <graphics>` | `E.build(..., lang="es", clips_dir=<EN>/clips/found)`. Reuse the EN framing and logo: copy EN `background.png` + `sidebar_watermark.png`, no `--lang es` (20 Oct) |
 
 The old "International Weather Network" subscribe animation is no longer used.
 

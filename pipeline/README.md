@@ -4,7 +4,7 @@ Kept outside `episodes/` so clearing old episodes does not delete it.
 
 ## New episode
 1. Copy `*.py` from here into `episodes/<YYYY-MM-DD-topic>/project/`.
-2. `python make_watermark.py <episode>/graphics` for English, add `--lang es` for Spanish (writes `background.png` + `sidebar_watermark.png`).
+2. `python make_watermark.py <episode>/graphics` (writes `background.png` + `sidebar_watermark.png`). Spanish versions: copy these two files from the English episode instead (20 Oct: same logo, no separate ES framing).
 3. Per episode, edit only: `SAY` in `make_narration.py`; `LOWER_THIRDS`, `TICKER_COPY`, `TICKER_LABEL`, `TICKER_STATUS` in
    `build_graphics.py`; and write `gen_edl.py` (-> `edl.json`).
 
@@ -35,8 +35,7 @@ crops are CapCut crop settings on each clip (`{"crop": [x, y, w, h]}` in the edi
 - **Reusing the user's own GWN videos** (GWN is the user's channel; no credit): put the downloads + `--write-auto-subs --sub-format json3` captions in `clips/raw/`, run `analyze_gwn.py` (finds stretches with no GWN lower-third/pop-up, crop box between the blurred side bars, GWN-voice overlap) and review `clips/_scan/<id>/seg_*.jpg`; mark rejects in `clips/gwn_segments.json`, then cut them into `clips/lib/` (see the Texas/Oklahoma episode's `make_lib.py`: `G..._q_` = no GWN voice, safe for sound breaks).
 - **Channel names (16 Oct 2026)**: English channel = *Independent Weather Network*, Spanish channel = *Instant Weather Network*.
   Set `lang="en"` (default) or `lang="es"` in `gen_edl.py`'s `E.build(...)`; the draft then uses
-  `iwn-brand-kit/motion/subscribe-<lang>-transparent.mov` (made by `make_subscribe.py`). Spanish episodes also need
-  `python make_watermark.py <episode>/graphics --lang es` (capital `IWN` watermark); English keeps the lowercase logo.
+  `iwn-brand-kit/motion/subscribe-<lang>-transparent.mov` (made by `make_subscribe.py`). (Before 20 Oct, Spanish episodes used `make_watermark.py --lang es` for a capital `IWN`; now they reuse the English logo and framing.)
 
 ## 17 Oct 2026 changes (user feedback)
 - `make_cta.py`: bigger subscribe CTA with like + bell buttons (cursor clicks like -> subscribe -> bell). Run once; render.py picks `subscribe-cta-<lang>-transparent.mov` automatically (SUB_LEN = 7).
@@ -66,3 +65,10 @@ crops are CapCut crop settings on each clip (`{"crop": [x, y, w, h]}` in the edi
 - **Revised the same day:** archive footage is only for events that have NOT happened yet. Use `E.build(..., event="upcoming", archive={clip: {"date": "SEP 2026"}})`; the default `event="happened"` refuses archive clips.
 - `E.build(..., tail="auto")`: no fixed runtime. The clip break per chapter is sized to the distinct footage in the library (8–45 s). `auto_tail` prints the projected runtime.
 - `build_capcut.py`: the iwn corner logo goes on every horizontal clip (`watermark` track, `graphics/corner_watermark.png` made on first use, capital IWN for ES). Vertical clips keep the side-bar logo tile.
+
+## 20 Oct 2026 — Spanish versions: translate + shuffle only
+- A Spanish version of an English video needs only three things:
+  1. Translate the narration (and the lower-third/ticker text).
+  2. Shuffle the clip placement (`gen_edl.py` with `clips_dir=<EN>/clips/found`, `lang="es"`, shuffled prefs/pool).
+  3. Build the draft.
+- No separate logo framing: `build_capcut.framed` reuses the English `_framed` copies by default, and the corner logo is the same lowercase iwn. Copy `background.png` and `sidebar_watermark.png` from the EN episode's graphics, so any newly framed span gets the same logo. Only the subscribe pill stays Spanish (`subscribe-cta-es`, Instant Weather Network).

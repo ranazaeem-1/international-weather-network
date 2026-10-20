@@ -5,7 +5,7 @@ Nothing is re-encoded. Tracks, bottom to top:
   main     : the ORIGINAL clips, cut as planned; logo/caption crops are CapCut crop settings on the clip, and CapCut fits
              the (cropped) picture inside the 1920x1080 canvas. Volume 0.12 under narration, 1.0 in breaks, 0 if muted.
   watermark: small iwn logo, top right, over every HORIZONTAL clip (user, 20 Oct: vertical clips already carry the logo
-             tile in their side bars); graphics/corner_watermark.png is made on first use
+             tile in their side bars); graphics/corner_watermark.png is made on first use (same logo for ES)
   lt       : per-chapter lower-third = intro clip + still + outro clip
   subscribe: subscribe animation
   ticker   : headline ticker strip (1920x192) after the subscribe CTA, then the CTA ticker (chapter "cta": True) at the end
@@ -36,19 +36,12 @@ WM_W, WM_OPACITY, WM_MARGIN = 160, 0.9, (64, 44)   # corner logo: width px, opac
 
 
 def corner_watermark(G):
-    """graphics/corner_watermark.png: the iwn logo (ES: capital IWN) in the top-right corner of a transparent 1920x1080 frame."""
+    """graphics/corner_watermark.png: the iwn logo in the top-right corner of a transparent 1920x1080 frame (EN and ES)."""
     out = G / "corner_watermark.png"
     if out.exists():
         return out
-    from PIL import Image, ImageDraw, ImageFont
-    if R.EDL.get("lang", "en") == "es":
-        f = ImageFont.truetype(str(R.KIT / "fonts/Manrope.ttf"), 200)
-        f.set_variation_by_axes([800])
-        bb = f.getbbox("IWN")
-        logo = Image.new("RGBA", (bb[2] - bb[0] + 8, bb[3] - bb[1] + 8), (0, 0, 0, 0))
-        ImageDraw.Draw(logo).text((4 - bb[0], 4 - bb[1]), "IWN", font=f, fill=(255, 255, 255, 255))
-    else:
-        logo = Image.open(R.KIT / "logo-white-transparent.png").convert("RGBA")
+    from PIL import Image
+    logo = Image.open(R.KIT / "logo-white-transparent.png").convert("RGBA")   # same lowercase iwn for EN and ES (20 Oct)
     logo = logo.crop(logo.getbbox())
     logo = logo.resize((WM_W, round(logo.height * WM_W / logo.width)), Image.LANCZOS)
     logo.putalpha(logo.getchannel("A").point(lambda a: int(a * WM_OPACITY)))
@@ -134,9 +127,9 @@ def framed(clip, opts):
     else:
         lo, hi = spans()[(clip, key)]
         hi = min(hi, int(R.probe(src)[0]))
-    # the side-bar watermark is baked in and differs by language (ES: capital IWN), so ES copies get their own folder
-    # EDL "framed_lang": "en" lets a translated edit reuse the English copies (user 20 Oct: keep the watermark, no reframing)
-    lang = R.EDL.get("framed_lang", R.EDL.get("lang", "en"))
+    # Spanish versions reuse the English framed copies and logo (user 20 Oct: no separate logo framing for ES; translate
+    # the narration, shuffle the clips, done). EDL "framed_lang" can still force a separate _framed_<lang> folder.
+    lang = R.EDL.get("framed_lang", "en")
     out = src.parent / ("_framed" if lang == "en" else f"_framed_{lang}") / f"{src.stem}{key}_s{lo}-{hi}.mp4"
     if not (out.exists() and out.stat().st_size > 0) and out.parent.exists():
         # reuse any existing copy of this clip + crop whose span covers the one needed (saves re-encoding)

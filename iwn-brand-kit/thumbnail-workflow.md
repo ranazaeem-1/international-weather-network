@@ -62,6 +62,12 @@ Revise failed criteria before export. Compare with the supplied references when 
 
 ## 6. Delivery and learning
 
+### User clarification — 19 October 2026
+
+Follow GWN's visual approach for the base scene: layered foreground, middle distance and background; broader views of affected areas; recognizable scale cues; distinct natural colors; and balanced exposure that keeps subjects readable under storm clouds. More useful visible detail matters more than simply adding foam, smoke or sharpening. Preserve coherent lighting and believable scene geometry. Use original scenes and event-supported consequences.
+
+The user explicitly retained the existing headline strip and LIVE badge. Keep their established sizes, placement and typography; do not shrink them to match GWN. Preserve the selected approved design's logo, borders and colors as well. This supersedes the assistant's suggestion to test more compact packaging. Apply GWN-inspired changes to the base visual within the approved packaging.
+
 Preserve originals and version revisions. Save PNG master, 1280x720 JPG and generation prompts in the project; describe AI illustrations accurately. A larger export alone is not added native detail.
 
 When analytics are supplied, record impressions, CTR, traffic source, observation window and retention/watch time alongside headline and visual direction. Public views or two outliers alone cannot isolate thumbnail performance from topic, timing and distribution. Test one major variable at a time where practical, then update this workflow from evidence.

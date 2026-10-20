@@ -4,6 +4,8 @@ Nothing is re-encoded. Tracks, bottom to top:
   bg       : one still, graphics/background.png (dark IWN frame) for the whole video - shows beside vertical clips
   main     : the ORIGINAL clips, cut as planned; logo/caption crops are CapCut crop settings on the clip, and CapCut fits
              the (cropped) picture inside the 1920x1080 canvas. Volume 0.12 under narration, 1.0 in breaks, 0 if muted.
+  watermark: small iwn logo, top right, over every HORIZONTAL clip (user, 20 Oct: vertical clips already carry the logo
+             tile in their side bars); graphics/corner_watermark.png is made on first use
   lt       : per-chapter lower-third = intro clip + still + outro clip
   subscribe: subscribe animation
   ticker   : headline ticker strip (1920x192) after the subscribe CTA, then the CTA ticker (chapter "cta": True) at the end
@@ -30,6 +32,60 @@ us = lambda s: int(round(s * SEC))
 STATIC = R.EDL.get("framing", "blur") == "static"
 LT_IN, LT_OUT_AT = 0.5, 7.4            # must match build_graphics.py
 TK_Y0, TK_H = 880, 192
+WM_W, WM_OPACITY, WM_MARGIN = 160, 0.9, (64, 44)   # corner logo: width px, opacity, (right, top) margin
+
+
+def corner_watermark(G):
+    """graphics/corner_watermark.png: the iwn logo (ES: capital IWN) in the top-right corner of a transparent 1920x1080 frame."""
+    out = G / "corner_watermark.png"
+    if out.exists():
+        return out
+    from PIL import Image, ImageDraw, ImageFont
+    if R.EDL.get("lang", "en") == "es":
+        f = ImageFont.truetype(str(R.KIT / "fonts/Manrope.ttf"), 200)
+        f.set_variation_by_axes([800])
+        bb = f.getbbox("IWN")
+        logo = Image.new("RGBA", (bb[2] - bb[0] + 8, bb[3] - bb[1] + 8), (0, 0, 0, 0))
+        ImageDraw.Draw(logo).text((4 - bb[0], 4 - bb[1]), "IWN", font=f, fill=(255, 255, 255, 255))
+    else:
+        logo = Image.open(R.KIT / "logo-white-transparent.png").convert("RGBA")
+    logo = logo.crop(logo.getbbox())
+    logo = logo.resize((WM_W, round(logo.height * WM_W / logo.width)), Image.LANCZOS)
+    logo.putalpha(logo.getchannel("A").point(lambda a: int(a * WM_OPACITY)))
+    from PIL import ImageFilter
+    xy = (1920 - WM_MARGIN[0] - logo.width, WM_MARGIN[1])
+    shadow = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))     # soft dark halo so the white logo reads on bright skies
+    a = Image.new("L", (1920, 1080), 0)
+    a.paste(logo.getchannel("A"), xy)
+    shadow.putalpha(a.filter(ImageFilter.GaussianBlur(6)).point(lambda v: min(255, int(v * 1.6))))
+    canvas = Image.new("RGBA", (1920, 1080), (0, 0, 0, 0))
+    canvas.alpha_composite(shadow)
+    canvas.alpha_composite(logo, xy)
+    canvas.save(out)
+    return out
+
+
+_dims = {}
+def is_horizontal(clip, opts):
+    """True when the (cropped) clip fills the 16:9 frame, i.e. it has no blurred side bars carrying the logo tile."""
+    if R.is_still(clip):
+        return False
+    src = R.EP / R.EDL["media"][clip]
+    if src not in _dims:
+        import json, subprocess
+        d = json.loads(subprocess.check_output(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_streams", "-of", "json", str(src)]))
+        st = d["streams"][0]
+        w, h = int(st["width"]), int(st["height"])
+        rot = abs(int(st.get("tags", {}).get("rotate", 0) or 0))
+        for sd in st.get("side_data_list", []) or []:
+            rot = abs(int(sd.get("rotation", rot) or 0))
+        _dims[src] = (h, w) if rot in (90, 270) else (w, h)
+    w, h = _dims[src]
+    if opts.get("crop"):
+        w, h = w * opts["crop"][2], h * opts["crop"][3]
+    elif opts.get("crop_top"):
+        h = h * (1 - opts["crop_top"])
+    return w / h >= 1.6
 
 
 def crop_key(opts):
@@ -79,8 +135,16 @@ def framed(clip, opts):
         lo, hi = spans()[(clip, key)]
         hi = min(hi, int(R.probe(src)[0]))
     # the side-bar watermark is baked in and differs by language (ES: capital IWN), so ES copies get their own folder
-    lang = R.EDL.get("lang", "en")
+    # EDL "framed_lang": "en" lets a translated edit reuse the English copies (user 20 Oct: keep the watermark, no reframing)
+    lang = R.EDL.get("framed_lang", R.EDL.get("lang", "en"))
     out = src.parent / ("_framed" if lang == "en" else f"_framed_{lang}") / f"{src.stem}{key}_s{lo}-{hi}.mp4"
+    if not (out.exists() and out.stat().st_size > 0) and out.parent.exists():
+        # reuse any existing copy of this clip + crop whose span covers the one needed (saves re-encoding)
+        import re
+        for p in out.parent.glob(f"{src.stem}{key}_s*-*.mp4"):
+            m = re.fullmatch(re.escape(src.stem + key) + r"_s(\d+)-(\d+)\.mp4", p.name)
+            if m and int(m[1]) <= lo + 2 and int(m[2]) >= hi - 3 and p.stat().st_size > 0:   # spans carry 2/3 s of padding
+                return p, int(m[1])
     if not (out.exists() and out.stat().st_size > 0):
         out.parent.mkdir(parents=True, exist_ok=True)
         tmp = out.with_suffix(".part.mp4")           # never leave a half-written file under the final name
@@ -97,9 +161,10 @@ def main():
     a = ap.parse_args()
     R.WORK.mkdir(parents=True, exist_ok=True)
     G = R.EP / "graphics"
+    wm = None
 
     script = cc.DraftFolder(a.drafts_dir).create_draft(a.name, 1920, 1080, fps=R.FPS, allow_replace=True)
-    for i, name in enumerate((["bg"] if STATIC else []) + ["main", "source_tag", "lt", "subscribe", "ticker"]):
+    for i, name in enumerate((["bg"] if STATIC else []) + ["main", "watermark", "source_tag", "lt", "subscribe", "ticker"]):
         script.add_track(cc.TrackType.video, name, relative_index=i)
     script.add_track(cc.TrackType.audio, "vo")
 
@@ -137,6 +202,9 @@ def main():
                 script.add_segment(cc.VideoSegment(m, cc.Timerange(us(at), take_us),
                                                    source_timerange=cc.Timerange(us(tin), take_us), volume=vol), "main")
                 tag_path = G / f"source_tags/src_{clip}.png"
+                if is_horizontal(clip, opts):                # iwn logo on horizontal footage (user, 20 Oct)
+                    wm = wm or mat(corner_watermark(G))
+                    script.add_segment(cc.VideoSegment(wm, cc.Timerange(us(at), take_us), source_timerange=cc.Timerange(0, take_us)), "watermark")
                 if tag_path.exists():
                     tag_m = mat(tag_path)
                     tag_dur = min(take, 5.0)

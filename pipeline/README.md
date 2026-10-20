@@ -59,3 +59,10 @@ crops are CapCut crop settings on each clip (`{"crop": [x, y, w, h]}` in the edi
 
 ## 18 Oct 2026 — chapter-reserved clips
 - `edl["reserve"] = {clip: ["S11", ...]}` in gen_edl.py limits a clip to those chapters (render.Pool checks `pool.chapter`). Use it for footage tied to one place (e.g. the Lake Erie waterspout in the waterspout chapter, the user's Chicago clip in the Chicago chapter); combine with `edl["must"]` for user clips.
+- make_narration.py cache key now includes SAY (19 Oct): `.ok` files store the spoken text, so adding a one-word fix regenerates every part that contains that name. Example tested fix: "Pego": "peggo" (default voice said "Pigo").
+
+## 20 Oct 2026 — archive footage
+- `E.build(..., archive={"F301": {"date": "FEB 2026", "chapters": ["S13"]}})`: footage from an earlier event is allowed only in the chapters about that event, and the narration there must say when it happened. `check_archive` refuses S00/S01. render.Pool reserves each archive clip to its chapters and offers it first there. There is no on-screen archive tag (user decision).
+- **Revised the same day:** archive footage is only for events that have NOT happened yet. Use `E.build(..., event="upcoming", archive={clip: {"date": "SEP 2026"}})`; the default `event="happened"` refuses archive clips.
+- `E.build(..., tail="auto")`: no fixed runtime. The clip break per chapter is sized to the distinct footage in the library (8–45 s). `auto_tail` prints the projected runtime.
+- `build_capcut.py`: the iwn corner logo goes on every horizontal clip (`watermark` track, `graphics/corner_watermark.png` made on first use, capital IWN for ES). Vertical clips keep the side-bar logo tile.

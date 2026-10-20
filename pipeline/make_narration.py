@@ -40,10 +40,14 @@ def segments():
         yield seg_id, title, "\n\n".join(body)
 
 
-async def tts(seg_id, text):
-    spoken = text
+def _spoken(text):
     for k, v in SAY.items():
-        spoken = re.sub(rf"\b{re.escape(k)}\b", v, spoken)
+        text = re.sub(rf"\b{re.escape(k)}\b", v, text)
+    return text
+
+
+async def tts(seg_id, text):
+    spoken = _spoken(text)
     comm = edge_tts.Communicate(spoken, VOICE, rate=RATE, boundary="SentenceBoundary")
     sub = edge_tts.SubMaker()
     with open(OUT / f"{seg_id}.mp3", "wb") as f:
@@ -71,11 +75,11 @@ async def main():
             done = OUT / f"{pid}.mp3"
             for attempt in range(10):   # edge-tts drops or hangs connections now and then
                 if done.exists() and done.stat().st_size > 2000 and (OUT / f"{pid}.ok").exists() \
-                        and (OUT / f"{pid}.ok").read_text(encoding="utf8") == para:
+                        and (OUT / f"{pid}.ok").read_text(encoding="utf8") == _spoken(para):   # cache key includes SAY, so a new fix regenerates
                     break
                 try:
                     await asyncio.wait_for(tts(pid, para), timeout=60)
-                    (OUT / f"{pid}.ok").write_text(para, encoding="utf8")
+                    (OUT / f"{pid}.ok").write_text(_spoken(para), encoding="utf8")
                     break
                 except Exception as e:
                     print('retry', pid, type(e).__name__, flush=True)

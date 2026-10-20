@@ -152,7 +152,11 @@ class Pool:
         self.must = set(EDL.get("must", []))
         # EDL "reserve": {clip: [chapter ids]} -> that clip may only appear in those chapters (e.g. a Lake Erie
         # waterspout only in the waterspout chapter, user clips in the chapter about their location)
-        self.reserve, self.chapter = EDL.get("reserve", {}), None
+        self.reserve, self.chapter = dict(EDL.get("reserve", {})), None
+        # archive footage (20 Oct): only in its past-event chapters, and offered first there so it is actually shown
+        self.archive = EDL.get("archive", {})
+        for c, a in self.archive.items():
+            self.reserve[c] = a["chapters"]
         self.need = max_shot
 
     def _cuts(self, need):
@@ -174,13 +178,19 @@ class Pool:
 
     def _range(self, c):
         tout = probe(EP / EDL["media"][c])[0] - 0.05 if not is_still(c) else 6.0
-        return 0.0, tout
+        # EDL "max_end": {clip: seconds} caps how far into a clip the edit may go (e.g. a translated edit reusing the
+        # English framed copies, user 20 Oct: no reframing)
+        return 0.0, min(tout, EDL.get("max_end", {}).get(c, tout))
 
     def _avail(self, c):
         tin, tout = self._range(c)
         return tout - self.pos.get(c, tin)
 
+    def _here(self, c):
+        return c not in self.reserve or self.chapter in self.reserve[c]
+
     def _pick(self, prefs, sound):
+        prefs = [c for c, a in self.archive.items() if self.chapter in a["chapters"] and not self.shown.get(c)] + list(prefs)
         ok = lambda c: c != self.last and (c not in self.reserve or self.chapter in self.reserve[c]) and (not sound or c not in MUTED) and self._range(c)[1] - self._range(c)[0] >= self.min_shot
         long_enough = min(self.want, self.max_shot - 2) - 0.05
         # clips the user asked for (EDL "must"): place each one at least once, trimming if it doesn't fit exactly
@@ -214,9 +224,9 @@ class Pool:
                 return max(fresh, key=lambda c: (-self.uses[c], self._avail(c)))
         again = [c for c in self.order if ok(c) and self.uses[c] < self.limit[c]]
         if not again and sound:                           # any clip still under its limit (silent) beats an extra repeat
-            again = [c for c in self.order if c != self.last and self.uses[c] < self.limit[c]]
+            again = [c for c in self.order if c != self.last and self.uses[c] < self.limit[c] and self._here(c)]
         if not again:
-            again = [c for c in self.order if c != self.last]   # pool far too small: allow more repeats rather than fail
+            again = [c for c in self.order if c != self.last and self._here(c)]   # pool far too small: allow more repeats rather than fail
         pref_again = [c for c in prefs if c in again]
         c = (pref_again or sorted(again, key=lambda c: self.uses[c]))[0]
         self.uses[c] += 1

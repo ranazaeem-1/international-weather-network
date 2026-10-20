@@ -11,6 +11,13 @@ International Weather Network · Working production guide · Updated 15 October 
 - **Clip audio: mute ONLY music** (user, 18 Oct). Speech in clips stays audible: eyewitnesses, reactions, people talking. Never replace or strip a clip's audio track when slicing. In `research/sources.csv`, log `sound: natural`, `speech` or `music`. In `gen_edl.py`, use `MUTED = E.muted_from_sources(EP)`, which mutes only clips logged with music. Picture rules are unchanged (no anchors, reporters on camera, TV bugs or burned-in text).
 - **Narration starts right after the cold open** with a line that anchors the footage ("The video you just saw was filmed Friday in San Clemente…") plus one open loop the video answers later ("…and what forecasters expect next could be worse").
 - **More narration: ~1,300–1,600 words, ~45–50 % of runtime (GWN measured 41–48 %)**, 15–17 one-paragraph chapters (see Script structure below), including the context chapters (science, history, what's next). Clip break after each chapter `tail=28`.
+- **Archive footage: only for events that have NOT happened yet (user, 20 Oct 2026, revised the same day).**
+  - **Upcoming or warned events:** a forecast, an approaching storm, a warning just issued. Footage of earlier events at the same place may be used, because no footage of the event exists yet. The narration must never say these pictures show the current event. Anchor the opening to the threat ("This is what the last nor'easter did to Rodanthe…"), not to "the video you just saw".
+  - **Events that already happened:** only real footage of this event is used. No archive clips at all, including in history chapters.
+  - **No on-screen ARCHIVE tag.**
+  - **In the pipeline:** `E.build(..., event="upcoming", archive={clip: {"date": "SEP 2026"}})`. The default `event="happened"` refuses any archive clip. Log archive clips in sources.csv as `verification_status: archive <event, month year>`.
+- **No fixed runtime (user, 20 Oct 2026).** The length follows the footage fetched: lots of verified footage gives a longer video, thin footage a shorter one, never padded with repeats. Use `E.build(..., tail="auto")`, which sizes each chapter's clip break to the distinct footage in the library (8–45 s): roughly runtime ≈ distinct footage minutes, ×1.25 when 2 uses are allowed. Example: 26.8 min of footage → about 20 min; 9 min → about 10 min.
+- **iwn watermark on horizontal footage (user, 20 Oct 2026).** Every horizontal clip (16:9 after crops, no side bars) gets the iwn logo top right, at 160 px with a soft shadow; ES videos get the capital IWN. Vertical clips already carry the logo tile in their blurred side bars. `build_capcut.py` adds it automatically on a `watermark` track and creates `graphics/corner_watermark.png` on first use. Nothing is re-encoded.
 - Measured reference: `gwn-vs-iwn-comparison-2026-10-18.md`.
 
 ### Narration voice and pronunciation (18 Oct 2026; audit in `research-voice-pronunciation-2026-10-18.md`)
@@ -31,7 +38,7 @@ International Weather Network · Working production guide · Updated 15 October 
 
 Produce original, factual weather-news videos using verified reporting, relevant footage, and the approved IWN identity. GWN is a reference for format, clean sourcing, and pacing; its scripts, edits, and graphics are not production assets.
 
-- **Target runtime: 13–15 minutes is the MINIMUM baseline** (780–900 seconds). When sufficient verified footage, damage documentation, and meteorological developments support it, extend the duration to **15–20+ minutes** (matching the depth of long-format coverage on channels like GWN).
+- **Runtime is not fixed (20 Oct 2026, see §0):** it follows the footage fetched. Older guidance: **13–15 minutes was the minimum baseline** (780–900 seconds). When sufficient verified footage, damage documentation, and meteorological developments support it, extend the duration to **15–20+ minutes** (matching the depth of long-format coverage on channels like GWN).
 - **Narration duration**: superseded by §0 (18 Oct). Was: since 17 Oct 2026, +15% (~1,100 words / ~6.5 min across 13 blocks). Previously ~800–1,000 words total across 14–18 concise narration blocks (~40–55 words / 15–20s spoken each, totalling ~5–6 minutes of voiceover). If extending past 15 minutes, add 2–4 additional narration blocks.
 - **Clean footage requirement**: Absolute zero tolerance for news anchors, TV network badges/chyrons, third-party watermarks, or social media emojis/stickers.
 - Deliver a finished video, thumbnail, upload copy, source register, and editable project.
@@ -206,7 +213,7 @@ A major defect in earlier episodes was pixelated, blurry, low-bitrate footage (3
 ### Verifying and Logging Clips
 For each clip:
 1. Identify the earliest credible upload and verify date and location frame-by-frame.
-2. Check for old recycled footage (e.g. past floods from previous years).
+2. Check for old recycled footage (e.g. past floods from previous years). Old footage may be used as **archive** only when the video is about an event that has not happened yet (a forecast or warning, §0), logged as `archive <event, month year>`. It is never passed off as the current event, and it is never used for events that already happened.
 3. Confirm audio is authentic (run `python audio_scan.py` to ensure no copyrighted background music).
 4. Record rights/credit in `research/sources.csv`. Apply the official on-screen lower-third source attribution tag (`build_source_tag.py`, §9) to eyewitness clips, and list full institutional citations in the YouTube description `SOURCES` list.
 

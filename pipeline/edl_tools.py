@@ -76,8 +76,47 @@ def _plan_overlays(ep, chapters, break_len, sub_len=7.0, lt_len=8.3):
         c["subscribe_at"] = subs
 
 
+def check_archive(archive, used, chapter_ids, event):
+    """Archive footage rule (user, 20 Oct 2026, revised): footage from an earlier event is allowed ONLY when the video's
+    event has NOT happened yet (event="upcoming": a forecast, an approaching storm, a warning just issued). For events
+    that already happened (event="happened") only real footage of that event is used, so any archive clip is refused.
+    No on-screen tag. archive = {clip: {"date": "SEP 2026", "chapters": [...optional, default all]}}. The narration must
+    never claim archive pictures show the current event."""
+    if event not in ("happened", "upcoming"):
+        raise SystemExit('event must be "happened" or "upcoming"')
+    if archive and event == "happened":
+        raise SystemExit("archive footage is only allowed for upcoming / warned events; this event already happened: "
+                         "use real footage of it only (" + ", ".join(archive) + ")")
+    out = {}
+    for clip, a in (archive or {}).items():
+        if clip not in used:
+            print("archive: skipped", clip, "(not in library)")
+            continue
+        if not a.get("date"):
+            raise SystemExit(f"archive clip {clip}: needs the date of the event it shows")
+        chs = list(a.get("chapters") or chapter_ids)
+        out[clip] = {"date": str(a["date"]).upper(), "chapters": chs}
+    if out:
+        print("archive clips (upcoming event):", ", ".join(f"{c} {v['date']}" for c, v in out.items()))
+    return out
+
+
+def auto_tail(ep, lib_seconds, max_uses, cold_open=20.0, lo=8.0, hi=45.0):
+    """No fixed runtime (user, 20 Oct 2026): the clip break after each chapter is sized so the edit uses the footage
+    that was actually fetched, without padding by repeats. runtime ~= distinct footage (x1.25 when 2 uses are allowed)."""
+    man = json.loads((ep / "audio/narration/manifest.json").read_text(encoding="utf8"))
+    narr = sum(m["duration"] for m in man)
+    n = sum(1 for m in man if m["duration"] > 0)
+    target = lib_seconds * (1.0 if max_uses <= 1 else 1.25)
+    tail = max(lo, min(hi, (target - narr - cold_open) / max(1, n)))
+    print(f"auto tail: {lib_seconds / 60:.1f} min footage, {narr / 60:.1f} min narration -> {tail:.0f} s breaks, "
+          f"runtime ~{(narr + cold_open + n * tail) / 60:.1f} min")
+    return round(tail, 1)
+
+
 def build(ep: Path, notes, chapters_fn, crop, muted, backup=(), clips_dir=None, break_len=12, tail=28, pattern="*.mp4", lang="en",
-          pool=True, important=(), max_uses=2, ticker_len=22, cta_ticker_len=12, every_chapter=True, auto_overlays=True, max_shot=13.0, reactions=()):
+          pool=True, important=(), max_uses=2, ticker_len=22, cta_ticker_len=12, every_chapter=True, auto_overlays=True, max_shot=13.0, reactions=(),
+          archive=None, event="happened"):
     """pool=True (default since 17 Oct): chapter shot/break lists are preferences; render.Pool hands out footage from the
     whole library so each clip continues where it left off and nothing repeats until the library is used up (max_uses,
     or 3 for clips in `important`). every_chapter=True puts the headline ticker and the CTA ticker in every chapter."""
@@ -90,6 +129,9 @@ def build(ep: Path, notes, chapters_fn, crop, muted, backup=(), clips_dir=None, 
             D[c] = round(float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                                                          str(files[c])]).strip()) - 0.1, 2)
         return D[c]
+
+    if tail == "auto":
+        tail = auto_tail(ep, sum(dur(c) for c in files if dur(c) >= 4.0 and files[c].suffix.lower() == ".mp4"), max_uses)
 
     def s(c, a=0.0, b=None):
         e = [c, a, dur(c) if b is None else min(b, dur(c))]
@@ -122,5 +164,9 @@ def build(ep: Path, notes, chapters_fn, crop, muted, backup=(), clips_dir=None, 
            "ticker_len": ticker_len, "cta_ticker_len": cta_ticker_len, "max_shot": max_shot, "chapters": chapters, "media": media}
     if pool:
         edl.update(pool=used, max_uses=max_uses, important=sorted(important), crops={c: crop[c] for c in used if c in crop})
+    archive = check_archive(archive, used, [c["id"] for c in chapters], event)
+    if archive:
+        edl["archive"] = archive
+    edl["event"] = event
     (ep / "project/edl.json").write_text(json.dumps(edl, indent=1), encoding="utf8")
     print(len(media), "clips in library" if pool else "clips used of", len(files))

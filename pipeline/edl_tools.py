@@ -101,6 +101,31 @@ def check_archive(archive, used, chapter_ids, event):
     return out
 
 
+INTRO_SECONDS, INTRO_OVERLAP = 3.4, 0.45   # must match make_intro.LENGTH / WIPE
+
+
+def check_cards(ep, chapter_ids):
+    """project/cards.py (user, 21 Oct 2026): every card once, in a narration chapter that exists, never in the cold open."""
+    p = ep / "project/cards.py"
+    if not p.exists():
+        print("cards: none (no project/cards.py)")
+        return
+    import iwn_gfx
+    _, cards = iwn_gfx.load_config(ep / "project")
+    seen = set()
+    for c in cards:
+        cid, chap = c.get("id"), c.get("chapter")
+        if cid in seen:
+            raise SystemExit(f"cards.py: card {cid} listed twice (no repeats)")
+        seen.add(cid)
+        if chap == chapter_ids[0] or chap == "S00":
+            raise SystemExit(f"cards.py: card {cid} is in the cold open ({chap}); cards go under narration only")
+        if chap not in chapter_ids:
+            raise SystemExit(f"cards.py: card {cid} names chapter {chap}, which is not in the edit")
+    where = ", ".join("%s@%s" % (c["id"], c["chapter"]) for c in cards)
+    print(f"cards: {len(cards)} ({where})")
+
+
 def auto_tail(ep, lib_seconds, max_uses, cold_open=20.0, lo=8.0, hi=45.0):
     """No fixed runtime (user, 20 Oct 2026): the clip break after each chapter is sized so the edit uses the footage
     that was actually fetched, without padding by repeats. runtime ~= distinct footage (x1.25 when 2 uses are allowed)."""
@@ -116,10 +141,12 @@ def auto_tail(ep, lib_seconds, max_uses, cold_open=20.0, lo=8.0, hi=45.0):
 
 def build(ep: Path, notes, chapters_fn, crop, muted, backup=(), clips_dir=None, break_len=12, tail=28, pattern="*.mp4", lang="en",
           pool=True, important=(), max_uses=2, ticker_len=22, cta_ticker_len=12, every_chapter=True, auto_overlays=True, max_shot=13.0, reactions=(),
-          archive=None, event="happened"):
+          archive=None, event="happened", intro=True):
     """pool=True (default since 17 Oct): chapter shot/break lists are preferences; render.Pool hands out footage from the
     whole library so each clip continues where it left off and nothing repeats until the library is used up (max_uses,
-    or 3 for clips in `important`). every_chapter=True puts the headline ticker and the CTA ticker in every chapter."""
+    or 3 for clips in `important`). every_chapter=True puts the headline ticker and the CTA ticker in every chapter.
+    intro=True (21 Oct 2026): a ~3.4 s intro title card (make_intro.py) after the cold open; cards in project/cards.py
+    (make_cards.py) are checked here and placed by build_capcut.py."""
     lib = Path(clips_dir) if clips_dir else ep / "clips/found"
     files = {p.name.split("_")[0]: p for p in sorted(lib.glob(pattern))}
     D = {}
@@ -168,5 +195,8 @@ def build(ep: Path, notes, chapters_fn, crop, muted, backup=(), clips_dir=None, 
     if archive:
         edl["archive"] = archive
     edl["event"] = event
+    if intro:
+        edl["intro"] = {"seconds": INTRO_SECONDS, "overlap": INTRO_OVERLAP}
+    check_cards(ep, [c["id"] for c in chapters])
     (ep / "project/edl.json").write_text(json.dumps(edl, indent=1), encoding="utf8")
     print(len(media), "clips in library" if pool else "clips used of", len(files))

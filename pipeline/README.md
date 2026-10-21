@@ -72,3 +72,16 @@ crops are CapCut crop settings on each clip (`{"crop": [x, y, w, h]}` in the edi
   2. Shuffle the clip placement (`gen_edl.py` with `clips_dir=<EN>/clips/found`, `lang="es"`, shuffled prefs/pool).
   3. Build the draft.
 - No separate logo framing: `build_capcut.framed` reuses the English `_framed` copies by default, and the corner logo is the same lowercase iwn. Copy `background.png` and `sidebar_watermark.png` from the EN episode's graphics, so any newly framed span gets the same logo. Only the subscribe pill stays Spanish (`subscribe-cta-es`, Instant Weather Network).
+
+## 21 Oct 2026 — faster framing
+- Why it was slow: every used clip span was re-encoded (blurred side bars + logo tile) with x264 `medium`/crf 16, running 6 jobs on 8 threads. A 12 s 4K60 drone shot took ~39 s, and an episode needs ~80 spans.
+- What changed:
+  1. **16:9 clips are not framed at all.** When the (cropped) width/height is >= 1.7 (`build_capcut.H_MIN`), the clip fills the frame, so its blurred bars were invisible anyway. It goes into the draft as the original file with CapCut crop settings and gets the corner iwn logo. `frame_all.py` frames only vertical/square clips.
+  2. **Framing encoder:** `veryfast`/crf 17 (`render.VENC`), about 2× faster per job. Framed copies are intermediates, and CapCut re-encodes on export.
+  3. **The `bg` track** (background.png) is now always under the main track, to fill thin bars beside not-quite-16:9 clips.
+- Measured: Outer Banks 95/97 shots and Spain update 22/111 shots need no framing. Intel QSV (`h264_qsv`) was only ~20% faster than veryfast here, so it is not used.
+
+## 21 Oct 2026 — horizontal watermark = iwn pattern, faster framing
+- `build_capcut.py`: horizontal (16:9) clips go in as originals with the tiled iwn pattern (`graphics/sidebar_watermark.png`, normal strength) on the `watermark` track. No re-encode, and the opacity is editable in CapCut. Set `"h_watermark": "corner"` in edl.json for the old top-right logo.
+- Only vertical and non-16:9 clips are framed (blurred side bars), at `preset veryfast, crf 17`. Run `frame_all.py` in the background after `gen_edl.py`.
+- Vertical framing (21 Oct): 30 fps and shrink to 1080 high before the blur, Intel Quick Sync encoder (`h264_qsv`) with x264 fallback. About 3x faster than before with the same look. No hardware decoding (d3d11va gave a green side bar). CapCut canvas blur was tested and rejected.

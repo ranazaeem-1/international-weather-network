@@ -17,7 +17,8 @@ International Weather Network · Working production guide · Updated 15 October 
   - **No on-screen ARCHIVE tag.**
   - **In the pipeline:** `E.build(..., event="upcoming", archive={clip: {"date": "SEP 2026"}})`. The default `event="happened"` refuses any archive clip. Log archive clips in sources.csv as `verification_status: archive <event, month year>`.
 - **No fixed runtime (user, 20 Oct 2026).** The length follows the footage fetched: lots of verified footage gives a longer video, thin footage a shorter one, never padded with repeats. Use `E.build(..., tail="auto")`, which sizes each chapter's clip break to the distinct footage in the library (8–45 s): roughly runtime ≈ distinct footage minutes, ×1.25 when 2 uses are allowed. Example: 26.8 min of footage → about 20 min; 9 min → about 10 min.
-- **iwn watermark on horizontal footage (user, 20 Oct 2026).** Every horizontal clip (16:9 after crops, no side bars) gets the iwn logo top right, at 160 px with a soft shadow; ES videos get the capital IWN. Vertical clips already carry the logo tile in their blurred side bars. `build_capcut.py` adds it automatically on a `watermark` track and creates `graphics/corner_watermark.png` on first use. Nothing is re-encoded.
+- **iwn watermark on horizontal footage (user, 21 Oct 2026; replaces the 20 Oct corner logo).** Every horizontal clip (16:9 after crops) plays full size with the tiled iwn pattern over it, at the side-bar tile's normal strength: `graphics/sidebar_watermark.png`, placed as a CapCut overlay on the `watermark` track. Nothing is re-encoded, and the opacity can be adjusted in CapCut. Vertical and non-16:9 clips keep the blurred side bars with the same tile. `edl.json` `"h_watermark": "corner"` brings back the single top-right logo.
+- **Framing speed (21 Oct 2026):** only vertical and non-16:9 clips are framed: an ffmpeg-encoded copy with blurred, darkened side bars and the iwn tile. CapCut's own canvas blur was tested and rejected by the user. Each source is converted to 30 fps and shrunk to 1080 high before the blur, then encoded with the Intel Quick Sync encoder (`h264_qsv`), with x264 veryfast/crf 17 as automatic fallback (`IWN_NO_HW=1` forces x264). Measured about 0.5-0.7 s of work per second of footage, against 2.1 s before. Do not use hardware decoding (d3d11va): it turned a side bar green. Run `frame_all.py` (6 threads) in the background right after `gen_edl.py`, and avoid parallel `qa_narration.py` runs (use `--fast`).
 - Measured reference: `gwn-vs-iwn-comparison-2026-10-18.md`.
 
 ### Narration voice and pronunciation (18 Oct 2026; audit in `research-voice-pronunciation-2026-10-18.md`)
@@ -41,7 +42,7 @@ Produce original, factual weather-news videos using verified reporting, relevant
 - **Runtime is not fixed (20 Oct 2026, see §0):** it follows the footage fetched. Older guidance: **13–15 minutes was the minimum baseline** (780–900 seconds). When sufficient verified footage, damage documentation, and meteorological developments support it, extend the duration to **15–20+ minutes** (matching the depth of long-format coverage on channels like GWN).
 - **Narration duration**: superseded by §0 (18 Oct). Was: since 17 Oct 2026, +15% (~1,100 words / ~6.5 min across 13 blocks). Previously ~800–1,000 words total across 14–18 concise narration blocks (~40–55 words / 15–20s spoken each, totalling ~5–6 minutes of voiceover). If extending past 15 minutes, add 2–4 additional narration blocks.
 - **Clean footage requirement**: Absolute zero tolerance for news anchors, TV network badges/chyrons, third-party watermarks, or social media emojis/stickers.
-- Deliver a finished video, thumbnail, upload copy, source register, and editable project.
+- Deliver a finished video, upload copy, source register, and editable project.
 - Work locally by default. Uploading or publishing requires a user instruction.
 
 ## 2. Approved IWN identity
@@ -49,13 +50,6 @@ Produce original, factual weather-news videos using verified reporting, relevant
 Use the existing assets in `iwn-brand-kit/` and the decisions in `iwn-brand-kit/source/brand-decisions.json`.
 
 - Video branding: use existing approved motion assets and channel-language settings below.
-- Thumbnail authority: root `AGENTS.md`, the three references in `iwn-brand-kit/approved-thumbnail-designs/`, and `iwn-brand-kit/thumbnail-workflow.md`. These supersede retired thumbnail directions in older brand-decision files and prompts.
-- Ask for Design 1, 2 or 3 on a new thumbnail request unless already specified. No single design supersedes the other two.
-- Designs 1/2 retain approved red packaging and English headlines; Design 3 uses yellow packaging and Spanish main headlines. Preserve each reference's logo, corners and badge wording.
-- Headline treatment: huge heavy black type on the approved white bordered panel, with a short event-supported place-plus-action hook.
-- Scene direction, updated 17 October: bright detailed exposure, readable night scenes, slightly elevated oblique aerial views, broader context and one clear focal subject. Avoid dark moody grading as the default.
-- Do not use the retired `thumbnail-storm-demo` or `thumbnail-overlay-editable` layouts for new uploads.
-- The New Mexico demo thumbnail is AI-adapted concept artwork, not verified documentary footage or a cleared reusable source image.
 
 Existing motion assets:
 
@@ -325,18 +319,15 @@ Known pitfalls already fixed in `render.py`: audio is mixed in a separate pass (
 
 Keep the editing project and graphics editable. If a tool or asset format fails, preserve the source and report the limitation rather than claiming a completed render.
 
-## 10. Thumbnail and upload copy
+## 10. Upload copy (metadata file)
 
-- Follow `iwn-brand-kit/thumbnail-workflow.md` and root `AGENTS.md`; use the selected finalized Design 1, 2 or 3 reference.
-- Choose relevant imagery whose origin and permitted use are recorded.
-- Draft short place-plus-action headlines and pair the best with a visual question the actual video answers. CALIFORNIA BURNING and PANAMA HIT AGAIN are user-reported outlier references, not verified CTR evidence.
-- Prefer bright, detailed, slightly elevated views showing broader impact. Night imagery must retain readable homes, streets, vehicles and terrain.
-- Avoid fabricated documentary scenes or exaggerated damage presented as evidence.
-- Preserve the selected approved logo and badge treatment; do not revert to the retired circular-logo layout.
-- Inspect at full size, 320x180 and 160x90 for headline legibility, visible subject detail, clear event scale and accurate story fit before delivery.
-- Default thumbnail size: 1280 × 720; check the platform's current upload limits when delivering.
-- Write an accurate title, concise description, reporting cutoff, chapters, and source/footage credits.
-- Keep editorial citations separate from footage ownership credits when they differ.
+One metadata file per episode in `delivery/` (the user may rename it, e.g. `delivery/france.md`; edit the existing file rather than adding a second one). It contains:
+- Title plus 2–3 alternatives: short place-plus-action hooks that use confirmed facts only.
+- Description: story paragraphs plus CHAPTERS with timestamps taken from the final draft.
+- **No SOURCES list and no FOOTAGE credit block in the description (user, 21 Oct 2026).** Keep sources in `research/facts.csv` and footage credits in `research/sources.csv` / `user_clips.csv`.
+- **At most 3 hashtags (user, 21 Oct 2026).**
+- A Tags field.
+- Internal notes, such as rights or licensing warnings and re-check reminders, go in the header above the Title and never in the description.
 
 ## 11. Quality control
 
@@ -360,7 +351,7 @@ Review the complete exported video, not only the editing timeline.
 - [ ] Tickers, lower-thirds, source credits, and subtitles do not collide.
 - [ ] No sample headlines, dates, or placeholders remain in motion graphics.
 - [ ] Audio measured and reviewed on speakers/headphones (−14 LUFS target).
-- [ ] Thumbnail and title accurately represent the report.
+- [ ] Title and description accurately represent the report.
 - [ ] Export plays from beginning to end and matches intended runtime/resolution.
 
 Correct issues, re-export affected deliverables, and verify the revised output.
@@ -370,7 +361,6 @@ Correct issues, re-export affected deliverables, and verify the revised output.
 Default delivery package:
 
 - Final 1080p MP4, typically H.264 video and AAC audio.
-- Final thumbnail PNG or JPG, plus editable thumbnail source.
 - Corrected SRT captions.
 - Editable project with media references and required assets.
 - Final script and shot list.

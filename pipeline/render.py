@@ -8,7 +8,7 @@ Each chapter = narration part, sound break, narration part, ... , tail break.
 Usage:  python render.py            # full render
         python render.py S02 S03    # re-render only these chapters, then re-join
 """
-import json, math, re, shutil, subprocess, sys
+import json, os, math, re, shutil, subprocess, sys
 from pathlib import Path
 
 EP = Path(__file__).resolve().parents[1]
@@ -23,7 +23,13 @@ LT_DELAY = 0.3
 LT_LEN = 8.0
 SUB_LEN = 7.0           # subscribe-cta animation length (6.0 for the old pill)
 UNDER_VO = 0.12          # clip sound level under narration
-VENC = ["-c:v", "libx264", "-preset", "medium", "-crf", "16", "-pix_fmt", "yuv420p", "-r", str(FPS)]
+# 21 Oct: preset veryfast / crf 17 (was medium / 16, about 2x slower); framed copies are intermediates, CapCut re-encodes on export
+VENC = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "17", "-pix_fmt", "yuv420p", "-r", str(FPS)]
+# 21 Oct: framing encodes with the Intel Quick Sync encoder (h264_qsv) and falls back to x264 above if it fails.
+# Decoding stays on the CPU: d3d11va hardware decoding turned one blurred side bar bright green (tested 21 Oct).
+# IWN_NO_HW=1 forces x264.
+HW_VENC = ["-c:v", "h264_qsv", "-global_quality", "20", "-r", str(FPS)]
+_hw_ok = os.environ.get("IWN_NO_HW") != "1"
 AENC = ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2"]
 WATERMARK = EP / "graphics/sidebar_watermark.png"
 REUSE_SHOTS = True      # reuse already-cut pieces in _work (set False after changing edl.json shot ranges)
@@ -81,7 +87,8 @@ def render_shot(clip, tin, dur, opts, vol, out, fade=False):
            "-filter_complex", vf, "-map", "[v]", "-map", "1:a", "-t", dur, *VENC, *AENC, out)
         return
     _, has_audio = probe(src)
-    vf = (f"[0:v]{crop}split[a][b];"
+    # fps + shrink to 1080 high BEFORE the split: 4K/60 sources were decoded, blurred and scaled at full size (21 Oct)
+    vf = (f"[0:v]{crop}fps={FPS},scale=-2:'min(1080,ih)':flags=bilinear,split[a][b];"
           f"[a]scale=480:270:force_original_aspect_ratio=increase,crop=480:270,boxblur=8:3,scale=1920:1080:flags=bilinear,"
           f"eq=brightness=-0.12:saturation=0.8[bg0];"
           f"[bg0][1:v]overlay=0:0:format=auto[bg];"
@@ -93,6 +100,14 @@ def render_shot(clip, tin, dur, opts, vol, out, fade=False):
     else:
         args += ["-f", "lavfi", "-t", dur, "-i", "anullsrc=r=48000:cl=stereo"]
         amap = ["-map", "2:a"]
+    global _hw_ok
+    if _hw_ok:
+        try:
+            ff(*args, "-filter_complex", vf, "-map", "[v]", *amap, "-t", dur, *HW_VENC, *AENC, out)
+            return
+        except RuntimeError as e:
+            _hw_ok = False                  # no usable GPU path on this machine/clip: CPU from now on
+            print("hardware framing failed, using CPU:", str(e).strip().splitlines()[-1:], flush=True)
     ff(*args, "-filter_complex", vf, "-map", "[v]", *amap, "-t", dur, *VENC, *AENC, out)
 
 

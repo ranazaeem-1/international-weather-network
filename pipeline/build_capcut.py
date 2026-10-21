@@ -4,15 +4,18 @@ Nothing is re-encoded. Tracks, bottom to top:
   bg       : one still, graphics/background.png (dark IWN frame) for the whole video - shows beside vertical clips
   main     : the ORIGINAL clips, cut as planned; logo/caption crops are CapCut crop settings on the clip, and CapCut fits
              the (cropped) picture inside the 1920x1080 canvas. Volume 0.12 under narration, 1.0 in breaks, 0 if muted.
-  watermark: small iwn logo, top right, over every HORIZONTAL clip (user, 20 Oct: vertical clips already carry the logo
-             tile in their side bars); graphics/corner_watermark.png is made on first use (same logo for ES)
+  watermark: the tiled iwn pattern (graphics/sidebar_watermark.png, normal strength) over every HORIZONTAL clip (user,
+             21 Oct; vertical clips carry the same tile in their blurred side bars). "h_watermark": "corner" in edl.json
+             brings back the single top-right logo (graphics/corner_watermark.png)
   lt       : per-chapter lower-third = intro clip + still + outro clip
   subscribe: subscribe animation
   ticker   : headline ticker strip (1920x192) after the subscribe CTA, then the CTA ticker (chapter "cta": True) at the end
   vo       : narration, one segment per paragraph
 Captions are written next to the draft as an SRT for upload (not burned in).
 
-Old look (each clip re-encoded with blurred, moving side bars): set "framing": "blur" in edl.json and run frame_all.py first.
+Blur look ("framing": "blur", the default): only clips that do NOT fill 16:9 (vertical/square phone video) are re-encoded
+with blurred side bars by frame_all.py; 16:9 clips go in as originals with CapCut crops (21 Oct: framing was ~3x slower
+than real time per clip and the bars were invisible on 16:9 footage anyway).
 
 Usage:  python build_capcut.py [--name IWN_draft_name] [--drafts-dir DIR]
 """
@@ -30,9 +33,26 @@ import render as R
 SEC = 1_000_000
 us = lambda s: int(round(s * SEC))
 STATIC = R.EDL.get("framing", "blur") == "static"
+# Vertical clips always use ffmpeg-framed copies with blurred, darkened side bars + iwn tile (user, 21 Oct: CapCut's own
+# canvas blur was tested and rejected as "not acceptable").
 LT_IN, LT_OUT_AT = 0.5, 7.4            # must match build_graphics.py
 TK_Y0, TK_H = 880, 192
 WM_W, WM_OPACITY, WM_MARGIN = 160, 0.9, (64, 44)   # corner logo: width px, opacity, (right, top) margin
+
+
+H_WATERMARK = "pattern"   # user 21 Oct: horizontal clips get the tiled iwn pattern (graphics/sidebar_watermark.png, the same
+                          # tile as the vertical clips' side bars, normal strength) as a CapCut overlay - no re-encode.
+                          # Set edl.json "h_watermark": "corner" for the older single top-right logo.
+
+
+def h_watermark(G):
+    """Overlay image put over every horizontal clip: the tiled iwn pattern (default) or the corner logo."""
+    if R.EDL.get("h_watermark", H_WATERMARK) == "corner":
+        return corner_watermark(G)
+    p = G / "sidebar_watermark.png"
+    if not p.exists():
+        raise SystemExit("graphics/sidebar_watermark.png missing: run make_watermark.py <episode>/graphics first")
+    return p
 
 
 def corner_watermark(G):
@@ -58,6 +78,7 @@ def corner_watermark(G):
     return out
 
 
+H_MIN = 1.7   # (cropped) width/height from which a clip fills the 16:9 frame: used as-is, no blurred side bars, corner logo
 _dims = {}
 def is_horizontal(clip, opts):
     """True when the (cropped) clip fills the 16:9 frame, i.e. it has no blurred side bars carrying the logo tile."""
@@ -78,7 +99,7 @@ def is_horizontal(clip, opts):
         w, h = w * opts["crop"][2], h * opts["crop"][3]
     elif opts.get("crop_top"):
         h = h * (1 - opts["crop_top"])
-    return w / h >= 1.6
+    return w / h >= H_MIN
 
 
 def crop_key(opts):
@@ -157,7 +178,7 @@ def main():
     wm = None
 
     script = cc.DraftFolder(a.drafts_dir).create_draft(a.name, 1920, 1080, fps=R.FPS, allow_replace=True)
-    for i, name in enumerate((["bg"] if STATIC else []) + ["main", "watermark", "source_tag", "lt", "subscribe", "ticker"]):
+    for i, name in enumerate(["bg", "main", "watermark", "source_tag", "lt", "subscribe", "ticker"]):
         script.add_track(cc.TrackType.video, name, relative_index=i)
     script.add_track(cc.TrackType.audio, "vo")
 
@@ -182,7 +203,8 @@ def main():
         for kind, start, _, pid, pieces in items:
             at = t0 + start
             for clip, tin, take, opts in pieces:
-                if STATIC:
+                horiz = is_horizontal(clip, opts)
+                if STATIC or horiz:                          # 16:9 clips fill the frame: original file + CapCut crop, no re-encode (21 Oct)
                     m = mat(R.EP / R.EDL["media"][clip], opts)
                     if R.is_still(clip):
                         tin = 0.0
@@ -195,8 +217,8 @@ def main():
                 script.add_segment(cc.VideoSegment(m, cc.Timerange(us(at), take_us),
                                                    source_timerange=cc.Timerange(us(tin), take_us), volume=vol), "main")
                 tag_path = G / f"source_tags/src_{clip}.png"
-                if is_horizontal(clip, opts):                # iwn logo on horizontal footage (user, 20 Oct)
-                    wm = wm or mat(corner_watermark(G))
+                if horiz:                                    # iwn pattern on horizontal footage (user, 21 Oct)
+                    wm = wm or mat(h_watermark(G))
                     script.add_segment(cc.VideoSegment(wm, cc.Timerange(us(at), take_us), source_timerange=cc.Timerange(0, take_us)), "watermark")
                 if tag_path.exists():
                     tag_m = mat(tag_path)
@@ -266,9 +288,8 @@ def main():
         print(f"{ch['id']}  {length:6.1f}s", flush=True)
         t0 += length
 
-    if STATIC:
-        bg = mat(G / "background.png")
-        script.add_segment(cc.VideoSegment(bg, cc.Timerange(0, us(t0)), source_timerange=cc.Timerange(0, us(t0))), "bg")
+    bg = mat(G / "background.png")          # under everything: fills any thin bars beside not-quite-16:9 clips
+    script.add_segment(cc.VideoSegment(bg, cc.Timerange(0, us(t0)), source_timerange=cc.Timerange(0, us(t0))), "bg")
     script.save()
     exp = R.EP / "exports"
     exp.mkdir(exist_ok=True)

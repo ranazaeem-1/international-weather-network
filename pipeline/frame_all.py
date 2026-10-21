@@ -8,7 +8,9 @@ jobs = {}
 for ch in R.EDL["chapters"]:
     for _, _, _, _, pieces in R.plan_chapter(ch)[1]:
         for clip, _, _, opts in pieces:
-            jobs[(clip, B.crop_key(opts))] = (clip, opts)
+            if not B.is_horizontal(clip, opts):       # 16:9 clips are used as originals (21 Oct): nothing to frame
+                jobs[(clip, B.crop_key(opts))] = (clip, opts)
+print(len(jobs), "clip ranges to frame (vertical / non-16:9 only)", flush=True)
 
 
 def go(job):

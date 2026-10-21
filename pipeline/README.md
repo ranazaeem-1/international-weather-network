@@ -13,6 +13,8 @@ Kept outside `episodes/` so clearing old episodes does not delete it.
 |---|---|---|
 | Narration | `make_narration.py` | 1-2 min |
 | Graphics & Ticker | `build_graphics.py` | about 1 min for 13 lower-thirds + ticker |
+| Intro title card | `make_intro.py` (`INTRO` in `cards.py`) | about 10 s |
+| Animated cards | `make_cards.py --stills`, then `make_cards.py` (`CARDS` in `cards.py`) | about 5 s / 40 s for 8-10 cards |
 | Source Tags | `build_source_tag.py` | seconds per clip (generates clean PNG/MOV attribution pills) |
 | Edit list | `gen_edl.py` | seconds |
 | CapCut draft | `build_capcut.py` | about 10 s |
@@ -85,3 +87,23 @@ crops are CapCut crop settings on each clip (`{"crop": [x, y, w, h]}` in the edi
 - `build_capcut.py`: horizontal (16:9) clips go in as originals with the tiled iwn pattern (`graphics/sidebar_watermark.png`, normal strength) on the `watermark` track. No re-encode, and the opacity is editable in CapCut. Set `"h_watermark": "corner"` in edl.json for the old top-right logo.
 - Only vertical and non-16:9 clips are framed (blurred side bars), at `preset veryfast, crf 17`. Run `frame_all.py` in the background after `gen_edl.py`.
 - Vertical framing (21 Oct): 30 fps and shrink to 1080 high before the blur, Intel Quick Sync encoder (`h264_qsv`) with x264 fallback. About 3x faster than before with the same look. No hardware decoding (d3d11va gave a green side bar). CapCut canvas blur was tested and rejected.
+
+## 21 Oct 2026 — intro title card + animated cards
+The look is matched to the user's hand-made Outer Banks graphics (youtube.com/watch?v=Bsw35dVmjLo). Rules are in worflow.md §0 and §9.
+- `cards.py` per episode (template: `cards_example.py`, which shows every type and option): `INTRO = {"headline", "date"}` and
+  `CARDS = [...]` (id, type, chapter, facts, pill, headline, sub, source + type-specific data).
+- `make_intro.py` → `graphics/intro.mov`. It is 3.4 s of ProRes 4444 with alpha: the iwn letters fade in, the red dot drops in, a rule opens, then the channel name, the headline and "LATEST UPDATES · date" appear, and a red bar wipes the card away. `--headline/--date/--lang es` override cards.py.
+- `make_cards.py` → `graphics/cards/<id>.mp4` (opaque H.264, 6-8 s) + `<id>.png` review stills. `--stills` (seconds) and `--contact` (`_contact.png`). It runs 4 cards in parallel.
+  - Types: storm_map, closure_map, forecast_map, explainer_map, track_map, map, stat, timeline, alert, flood_map (GeoJSON or image), satellite (mp4).
+  - Checks: no repeated id, headline or media file; no card in S00; fact ids must exist in research/facts.csv (`--no-facts-check` for tests); forecast/track maps must say forecast or outlook.
+  - It prints a warning when a map label collides with the headline, logo or another label.
+- Maps use `geo/natural_earth_10m.npz`: Natural Earth 1:10m land, lakes, borders, states and populated places. It is public domain, 4.4 MB, and works offline. Rebuild it with `geo/pack_natural_earth.py <folder of Natural Earth GeoJSON>`. When the scripts run from an episode's `project/` folder, they find it in `<root>/pipeline/geo/`, so there is no need to copy `geo/`.
+- Shared drawing code is in `iwn_gfx.py` (fonts, colours, pill/headline/sub/source/logo chrome, encoders).
+- `edl_tools.build(..., intro=True)` (default) writes `"intro": {"seconds": 3.4, "overlap": 0.45}` and checks `cards.py`.
+  - `render.plan_chapter` gives S00 an extra `("intro", start, 2.95, None, [])` item, so the chapter times, the SRT and `update_chapters.py` all include it.
+  - Old edl.json files without `"intro"` are unchanged.
+- `build_capcut.py`: the new `cards` track sits between `source_tag` and `lt`.
+  - The intro goes at the end of S00, and its wipe overlaps the start of S01.
+  - `card_schedule()` places each card once under its chapter's narration: at `at` if given, else the first 0.5 s step after the lower-third that fits inside one narration part and covers no `must` clip. Each card fades with alpha keyframes of 0.3 s.
+  - Lower-thirds, the subscribe pill and the tickers stay above the cards.
+- Tested 21 Oct on a copy of the France Storm Adam episode: intro + 8 cards from its facts.csv. The draft is 13.2 min, and `build_capcut` takes about 10 s.

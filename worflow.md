@@ -297,6 +297,12 @@ As a starting mix target, aim near −14 LUFS integrated and at or below −1 dB
    - Run `python check_crops.py` in the episode's `project/` directory to generate the visual contact sheet (`crop_check.jpg`) and verify that every clip in the edit is 100% clean.
 8. Captions are generated from the narration timing; check place names and numbers.
 9. Check a frame from every graphic moment for collisions before export.
+10. **Intro title card and animated cards (21 Oct 2026; rules in §0).** Both are generated, not built by hand in CapCut:
+    - Write `project/cards.py` while writing the script: `INTRO = {"headline": ..., "date": "20 OCT 2026"}` and `CARDS = [...]`. Each card has an `id`, a `type`, the narration `chapter` it illustrates (never S00), the `facts` ids from `research/facts.csv` it shows, and `pill` / `headline` / `sub` / `source`. `pipeline/cards_example.py` shows every card type.
+    - Card types: `storm_map` (spinning L + city pins), `closure_map` (red route drawn on + CLOSED tag), `forecast_map`, `explainer_map` (low + wind arrows), `track_map` (NHC outlook), `map` (observed totals etc.), `stat` (1–3 numbers that count up), `timeline`, `alert`, `flood_map` (a GeoJSON from Copernicus EMS etc., or a map image), `satellite` (a NOAA / NASA / RAMMB mp4).
+    - Maps are drawn from the bundled Natural Earth data (public domain, offline). Pins take a place name (`"Norfolk|Virginia"`) or `[label, lat, lon]`. Every coordinate on a card must come from the facts or an official map.
+    - `python make_intro.py` → `graphics/intro.mov` (3.4 s, alpha). `python make_cards.py --stills` → review stills plus `graphics/cards/_contact.png` in a few seconds. Then `python make_cards.py` → `graphics/cards/<id>.mp4` (about 40 s for 8–10 cards). It refuses repeats, cards in S00, missing fact ids, and forecast maps that don't say "forecast". It warns when a map label sits under the headline or logo; fix that with `view` or `side`.
+    - `gen_edl.py` (`E.build`, `intro=True` default) reserves the intro slot after the cold open and checks `cards.py`. `build_capcut.py` puts the intro on the `cards` track (its red wipe plays over the start of S01). Each card goes in once, under its chapter's narration after the lower-third, avoiding the user's must-show clips, with 0.3 s alpha fades. The lower-third, subscribe pill and ticker tracks stay on top. `render.py` (flat render) includes the intro but not the cards.
 
 ### The pipeline (in each episode's `project/` folder — copy from the latest episode, e.g. `episodes/2026-10-07-france-flash-floods/project/`)
 
@@ -310,6 +316,8 @@ Check that `VOICE` in `make_narration.py` is `en-US-AndrewMultilingualNeural` af
 | Clean crop audit | `python check_crops.py` → review `crop_check.jpg` for badges/emojis |
 | Lower-thirds + ticker | `python build_graphics.py` (edit the `LOWER_THIRDS` table and `TICKER_COPY` first; runs ~1 min per graphic — start it early in the background) |
 | Source attribution tags | `python build_source_tag.py "<source>" "<location>" [--pos bottom_left\|top_right] [--anim]` (writes transparent PNG/MOV) |
+| Intro title card | `python make_intro.py` (reads `INTRO` in `cards.py`) |
+| Animated cards | `python make_cards.py --stills` (review) → `python make_cards.py` (reads `CARDS` in `cards.py`) |
 | Edit list | `edl.json`: per chapter `shots` (under narration) and `breaks` (sound-on clips), `break_len` 18–25s |
 | Pre-frame blur sidebars | `python frame_all.py` (parallel renders blurred moving background for all non-16:9 clips at CRF 16) |
 | CapCut draft / Render | `python build_capcut.py` (builds multi-track draft with blurred framing + source tags) or `python render.py` |

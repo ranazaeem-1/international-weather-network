@@ -7,6 +7,9 @@ Nothing is re-encoded. Tracks, bottom to top:
   watermark: the tiled iwn pattern (graphics/sidebar_watermark.png, normal strength) over every HORIZONTAL clip (user,
              21 Oct; vertical clips carry the same tile in their blurred side bars). "h_watermark": "corner" in edl.json
              brings back the single top-right logo (graphics/corner_watermark.png)
+  cards    : the intro title card right after the cold open (graphics/intro.mov, make_intro.py; its red wipe plays over
+             the start of S01) and the animated info cards (graphics/cards/<id>.mp4, make_cards.py), each once, under
+             the narration of the chapter named in project/cards.py, faded in/out with alpha keyframes (21 Oct)
   lt       : per-chapter lower-third = intro clip + still + outro clip
   subscribe: subscribe animation
   ticker   : headline ticker strip (1920x192) after the subscribe CTA, then the CTA ticker (chapter "cta": True) at the end
@@ -167,6 +170,84 @@ def framed(clip, opts):
     return out, lo
 
 
+# ---- intro + cards (user, 21 Oct 2026) ----------------------------------------------------------------------------
+CARD_FADE = 0.3
+CARD_EARLIEST = R.LT_DELAY + R.LT_LEN + 0.3      # after the chapter's lower-third
+
+
+def card_schedule():
+    """[(absolute start, seconds, mp4 path, card id, chapter)] for every card in project/cards.py.
+
+    Each card goes under the narration of its chapter: at its "at" (seconds from the chapter start) when given, else the
+    first spot after the lower-third where it fits inside one narration part and covers none of the user's must-show
+    clips. Never in the cold open, never twice, never overlapping another card."""
+    import iwn_gfx
+    _, cards = iwn_gfx.load_config(R.EP / "project")
+    if not cards:
+        return []
+    starts, t = {}, 0.0
+    for ch in R.EDL["chapters"]:
+        length, items = R.plan_chapter(ch)
+        starts[ch["id"]] = (t, length, items, ch)
+        t += length
+    must = set(R.EDL.get("must", []))
+    out, seen, busy = [], set(), {}
+    for c in cards:
+        cid, chap = c["id"], c.get("chapter")
+        if cid in seen:
+            raise SystemExit(f"card {cid}: listed twice in cards.py (no repeats)")
+        seen.add(cid)
+        if chap not in starts or starts[chap][3].get("clips_only"):
+            raise SystemExit(f"card {cid}: chapter {chap!r} is not a narration chapter of this edit (never the cold open)")
+        path = R.EP / f"graphics/cards/{cid}.mp4"
+        if not path.exists():
+            raise SystemExit(f"graphics/cards/{cid}.mp4 missing: run make_cards.py")
+        t0, length, items, _ = starts[chap]
+        sec = max(6.0, min(8.0, float(c.get("seconds", 7.0))))
+        vos = [(st, d, pieces) for kind, st, d, _, pieces in items if kind == "vo"]
+
+        def clash(a, b):
+            if any(not (b <= x0 or a >= x1) for x0, x1 in busy.get(chap, [])):
+                return True
+            for st, d, pieces in vos:                         # must-show user clips stay visible
+                at = st
+                for clip, _, take, _ in pieces:
+                    if clip in must and not (b <= at or a >= at + take):
+                        return True
+                    at += take
+            return False
+
+        at = None
+        if c.get("at") is not None:
+            want = float(c["at"])
+            ok = [(st, d) for st, d, _ in vos if st - 0.05 <= want and want + sec <= st + d + 0.5]
+            if ok:
+                at = want
+            else:
+                print(f"card {cid}: at={want} is not inside one narration part of {chap}; placing it automatically")
+        if at is None:
+            for lo in (CARD_EARLIEST, 0.5):                  # after the lower-third if the paragraph is long enough
+                for st, d, _ in vos:
+                    a = max(st + 0.3, lo)
+                    while a + sec <= st + d + 0.01 and at is None:
+                        if not clash(a, a + sec):
+                            at = round(a, 2)
+                        a += 0.5
+                    if at is not None:
+                        break
+                if at is not None:
+                    break
+        if at is None:                                    # narration parts too short: shorten to the longest part
+            st, d, _ = max(vos, key=lambda v: v[1])
+            if d < 4.5:
+                raise SystemExit(f"card {cid}: no narration part in {chap} is long enough for a card")
+            at, sec = round(st + 0.3, 2), round(min(sec, d - 0.4), 2)
+            print(f"card {cid}: shortened to {sec:.1f} s to stay under the narration of {chap}")
+        busy.setdefault(chap, []).append((at, at + sec))
+        out.append((t0 + at, sec, path, cid, chap))
+    return out
+
+
 # ---- draft -------------------------------------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser()
@@ -178,7 +259,7 @@ def main():
     wm = None
 
     script = cc.DraftFolder(a.drafts_dir).create_draft(a.name, 1920, 1080, fps=R.FPS, allow_replace=True)
-    for i, name in enumerate(["bg", "main", "watermark", "source_tag", "lt", "subscribe", "ticker"]):
+    for i, name in enumerate(["bg", "main", "watermark", "source_tag", "cards", "lt", "subscribe", "ticker"]):
         script.add_track(cc.TrackType.video, name, relative_index=i)
     script.add_track(cc.TrackType.audio, "vo")
 
@@ -200,8 +281,16 @@ def main():
     t0, vo_abs, n = 0.0, [], 0
     for ch in R.EDL["chapters"]:
         length, items = R.plan_chapter(ch)
-        for kind, start, _, pid, pieces in items:
+        for kind, start, dur, pid, pieces in items:
             at = t0 + start
+            if kind == "intro":                              # intro title card; its wipe overlaps the start of S01
+                if not R.INTRO_MOV.exists():
+                    raise SystemExit("graphics/intro.mov missing: run make_intro.py (or set \"intro\": null in edl.json)")
+                im = mat(R.INTRO_MOV)
+                d = min(im.duration, us(dur + float(R.EDL["intro"].get("overlap", 0.45))))
+                script.add_segment(cc.VideoSegment(im, cc.Timerange(us(at), d), source_timerange=cc.Timerange(0, d)), "cards")
+                print(f"intro   at {at:6.1f}s", flush=True)
+                continue
             for clip, tin, take, opts in pieces:
                 horiz = is_horizontal(clip, opts)
                 if STATIC or horiz:                          # 16:9 clips fill the frame: original file + CapCut crop, no re-encode (21 Oct)
@@ -287,6 +376,15 @@ def main():
                                                    clip_settings=tk_pos), "ticker")
         print(f"{ch['id']}  {length:6.1f}s", flush=True)
         t0 += length
+
+    for at, sec, path, cid, chap in card_schedule():
+        m = mat(path)
+        d = min(us(sec), m.duration)
+        seg = cc.VideoSegment(m, cc.Timerange(us(at), d), source_timerange=cc.Timerange(0, d))
+        for off, v in ((0, 0.0), (us(CARD_FADE), 1.0), (d - us(CARD_FADE), 1.0), (d, 0.0)):
+            seg.add_keyframe(cc.KeyframeProperty.alpha, off, v)
+        script.add_segment(seg, "cards")
+        print(f"card    {cid:<16} {chap}  at {int(at // 60)}:{at % 60:04.1f}  {sec:.1f}s", flush=True)
 
     bg = mat(G / "background.png")          # under everything: fills any thin bars beside not-quite-16:9 clips
     script.add_segment(cc.VideoSegment(bg, cc.Timerange(0, us(t0)), source_timerange=cc.Timerange(0, us(t0))), "bg")

@@ -46,6 +46,27 @@ def subscribe_mov():
         raise SystemExit(f"{p.name} missing: run pipeline/make_subscribe.py")
     return p
 
+INTRO_MOV = EP / "graphics/intro.mov"
+
+
+def intro_slot():
+    """Seconds the intro title card adds after the cold open (user, 21 Oct 2026). edl.json "intro": {"seconds": 3.4,
+    "overlap": 0.45} (written by edl_tools.build); the last `overlap` seconds (the red wipe) play over the start of S01.
+    Old edit lists without "intro" get no intro."""
+    it = EDL.get("intro")
+    if not it:
+        return 0.0
+    return round(float(it.get("seconds", 3.4)) - float(it.get("overlap", 0.45)), 2)
+
+
+def _with_intro(ch, length, items):
+    """The cold open (S00) is followed by the intro slot: an ("intro", start, slot, None, []) item, no footage."""
+    slot = intro_slot()
+    if ch.get("clips_only") and ch["id"] == EDL["chapters"][0]["id"] and slot > 0:
+        return round(length + slot, 2), items + [("intro", length, slot, None, [])]
+    return length, items
+
+
 def ff(*args, cwd=WORK):
     r = subprocess.run(["ffmpeg", "-v", "error", "-y", *map(str, args)], cwd=cwd, capture_output=True, text=True)
     if r.returncode:
@@ -344,7 +365,7 @@ def _plan_all():
         def take(need, sound):
             return [(c, a, d, crops.get(c, {})) for c, a, d, _ in pool.take(need, breaks if sound else shots, sound)]
         if ch.get("clips_only"):
-            _PLANS[ch["id"]] = (round(ch["tail"], 2), [("break", 0.0, ch["tail"], None, take(ch["tail"], True))])
+            _PLANS[ch["id"]] = _with_intro(ch, round(ch["tail"], 2), [("break", 0.0, ch["tail"], None, take(ch["tail"], True))])
             continue
         parts = MAN[ch["id"]]["parts"]
         items, t = [], 0.0
@@ -371,7 +392,7 @@ def plan_chapter(ch):
             _plan_all()
         return _PLANS[ch["id"]]
     if ch.get("clips_only"):            # cold open: real clips with their own sound, no narration
-        return round(ch["tail"], 2), [("break", 0.0, ch["tail"], None, Feed(ch["breaks"]).take(ch["tail"]))]
+        return _with_intro(ch, round(ch["tail"], 2), [("break", 0.0, ch["tail"], None, Feed(ch["breaks"]).take(ch["tail"]))])
     parts = MAN[ch["id"]]["parts"]
     shots, breaks = Feed(ch["shots"]), Feed(ch["breaks"])
     items, t = [], 0.0
@@ -389,7 +410,17 @@ def render_chapter(ch):
     cid = ch["id"]
     length, items = plan_chapter(ch)
     names, n = [], 0
-    for kind, _, _, _, pieces in items:
+    for kind, _, dur, _, pieces in items:
+        if kind == "intro":                 # intro title card on the background, silent; this flat render stops before the wipe
+            out = WORK / f"{cid}_{n:02d}_intro.mp4"
+            if not INTRO_MOV.exists():
+                raise SystemExit("graphics/intro.mov missing: run make_intro.py")
+            ff("-loop", "1", "-t", dur, "-i", EP / "graphics/background.png", "-i", INTRO_MOV, "-f", "lavfi", "-t", dur,
+               "-i", "anullsrc=r=48000:cl=stereo", "-filter_complex",
+               "[0:v]scale=1920:1080,setsar=1[b];[b][1:v]overlay=format=auto,format=yuv420p[v]",
+               "-map", "[v]", "-map", "2:a", "-t", dur, *VENC, *AENC, out.name)
+            names.append(out.name); n += 1
+            continue
         for clip, tin, take, opts in pieces:
             out = WORK / f"{cid}_{n:02d}_{kind}_{clip}.mp4"
             if REUSE_SHOTS and out.exists() and out.stat().st_size > 0:

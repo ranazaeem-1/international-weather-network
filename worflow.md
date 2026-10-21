@@ -12,13 +12,34 @@ International Weather Network · Working production guide · Updated 15 October 
 - **Narration starts right after the cold open** with a line that anchors the footage ("The video you just saw was filmed Friday in San Clemente…") plus one open loop the video answers later ("…and what forecasters expect next could be worse").
 - **More narration: ~1,300–1,600 words, ~45–50 % of runtime (GWN measured 41–48 %)**, 15–17 one-paragraph chapters (see Script structure below), including the context chapters (science, history, what's next). Clip break after each chapter `tail=28`.
 - **Archive footage: only for events that have NOT happened yet (user, 20 Oct 2026, revised the same day).**
-  - **Upcoming or warned events:** a forecast, an approaching storm, a warning just issued. Footage of earlier events at the same place may be used, because no footage of the event exists yet. The narration must never say these pictures show the current event. Anchor the opening to the threat ("This is what the last nor'easter did to Rodanthe…"), not to "the video you just saw".
+  - **Upcoming or warned events:** a forecast, an approaching storm, a warning just issued. Archive footage may be used, because no footage of the event exists yet.
+  - **Archive must be the same kind of event in the same place (user, 21 Oct 2026).** Use clips of real past storms or floods that hit that country or region. Example: for a Storm Austen warning in the UK, use only footage of earlier storms in the UK. Never use random vlogs, generic weather clips, or another country's storm. Each archive clip must be traceable to a named past event, with its date and place logged.
+  - **The narration never mentions archive footage (user, 21 Oct 2026).** No "these pictures are from Storm X" and no "archive" disclaimers. Never say the pictures show the current event either: write those chapters so they don't refer to the pictures at all, and anchor the opening to the threat, not to "the video you just saw".
   - **Events that already happened:** only real footage of this event is used. No archive clips at all, including in history chapters.
   - **No on-screen ARCHIVE tag.**
   - **In the pipeline:** `E.build(..., event="upcoming", archive={clip: {"date": "SEP 2026"}})`. The default `event="happened"` refuses any archive clip. Log archive clips in sources.csv as `verification_status: archive <event, month year>`.
 - **No fixed runtime (user, 20 Oct 2026).** The length follows the footage fetched: lots of verified footage gives a longer video, thin footage a shorter one, never padded with repeats. Use `E.build(..., tail="auto")`, which sizes each chapter's clip break to the distinct footage in the library (8–45 s): roughly runtime ≈ distinct footage minutes, ×1.25 when 2 uses are allowed. Example: 26.8 min of footage → about 20 min; 9 min → about 10 min.
 - **iwn watermark on horizontal footage (user, 21 Oct 2026; replaces the 20 Oct corner logo).** Every horizontal clip (16:9 after crops) plays full size with the tiled iwn pattern over it, at the side-bar tile's normal strength: `graphics/sidebar_watermark.png`, placed as a CapCut overlay on the `watermark` track. Nothing is re-encoded, and the opacity can be adjusted in CapCut. Vertical and non-16:9 clips keep the blurred side bars with the same tile. `edl.json` `"h_watermark": "corner"` brings back the single top-right logo.
 - **Framing speed (21 Oct 2026):** only vertical and non-16:9 clips are framed: an ffmpeg-encoded copy with blurred, darkened side bars and the iwn tile. CapCut's own canvas blur was tested and rejected by the user. Each source is converted to 30 fps and shrunk to 1080 high before the blur, then encoded with the Intel Quick Sync encoder (`h264_qsv`), with x264 veryfast/crf 17 as automatic fallback (`IWN_NO_HW=1` forces x264). Measured about 0.5-0.7 s of work per second of footage, against 2.1 s before. Do not use hardware decoding (d3d11va): it turned a side bar green. Run `frame_all.py` (6 threads) in the background right after `gen_edl.py`, and avoid parallel `qa_narration.py` runs (use `--fast`).
+- **Intro title card and animated graphics, in low quantity (user, 21 Oct 2026; reference: the user's Outer Banks video https://www.youtube.com/watch?v=Bsw35dVmjLo).**
+  - **Intro title card, about 3 s, right after the cold open and before S01.** Dark navy background; the iwn logo animates in with its red dot; "INDEPENDENT WEATHER NETWORK"; the episode headline in bold condensed capitals; "LATEST UPDATES · <date>". It ends with a red wipe into the first narration clip.
+  - **Animated cards: about 6–9 in a 12–15 min video, about one every 1.5–2 min, each 6–8 s.** Every card is different: no card, map or satellite visual is shown twice. Types used in the reference:
+    - storm-zone or track map (spinning red "L", city pins popping in)
+    - local map of a closure or impact (e.g. Highway 12 closed)
+    - "By the numbers" stat card
+    - timeline
+    - explainer map (what a nor'easter is)
+    - official alert card (e.g. NWS coastal flood warning bullets)
+    - tide or rain forecast map
+    - outlook or track map (NHC)
+  - **New types allowed: a flood map, and satellite visuals of the incident.** Examples: a Copernicus EMS / Sentinel flood-extent map, a NASA / NOAA / RAMMB satellite loop, a radar loop. Each is used once only, with no repeats. Use official or clean sources, and log them in `research/sources.csv`.
+  - **Style (match the reference):** dark navy background, red category pill at the top left (STORM ZONE, TIMELINE, BY THE NUMBERS, NWS ALERT, EXPLAINER, TIDE FORECAST, NHC OUTLOOK, FLOOD MAP, SATELLITE), bold white condensed headline with a short sub-line, small source line at the bottom left, iwn logo at the top right. The headline ticker stays on top.
+  - **Placement:** under the narration line the card illustrates, never in the cold open, and never replacing the user's clips. Every number, place and track on a card comes from `research/facts.csv`. Forecast maps say "forecast", and a map never shows an invented track or flood area.
+  - **Footage still carries the video.** The cards are short accents, not filler, and they don't count toward the footage library for `tail="auto"`.
+- **One event, several angles = several videos (user, 21 Oct 2026).** When an event has more than one distinct angle and there is enough verified footage for each, make a separate video per angle instead of one combined video. Angles include different places (Corsica vs Gard/Marseille), different phases (the hit vs the aftermath or toll), different hazards (floods vs a tornado, waterspout or fire whirl), and a forecast or threat vs what already happened.
+  - **Each video needs its own footage.** No clip appears in two videos of the same event unless that is unavoidable. Each video also needs its own research focus and title, and must still meet the clean-footage and no-filler rules.
+  - **When to merge:** if an angle has too little clean footage for a video of its own, fold it into the strongest one as a chapter rather than padding it.
+  - **At intake, propose the split:** list the angles with the footage minutes for each, and suggest which videos to make before scripting.
 - Measured reference: `gwn-vs-iwn-comparison-2026-10-18.md`.
 
 ### Narration voice and pronunciation (18 Oct 2026; audit in `research-voice-pronunciation-2026-10-18.md`)
@@ -32,7 +53,7 @@ International Weather Network · Working production guide · Updated 15 October 
 - **Arc for fires:** start and why the place matters → growth by clock time → homes → evacuations (explain what the order means) → the firefight → **the science (e.g. Santa Ana winds) and history at about 30–45 % of runtime** → roads/power/air → other fires (distance + direction) → official response → what's next → an "As of [time, date]" recap. Floods: same skeleton plus victim chapters, with the "why it got so bad" chapter late as the answer to the opening question.
 - **Hand-offs, not teasers:** end each paragraph by naming the next subject plainly; start the next paragraph on that subject. No "And it came at a cost." style cliffhangers, and no promising more than the facts deliver.
 - **Language:** ~14-word sentences, plain verbs, define terms right away ("zero containment means…"), attribute every number to a source and time, use relatable comparisons. Do not read zone codes or addresses out as lists.
-- **Footage:** mention the footage only in the opening; write the rest so any clip of the event fits. Narrate the right fire over the right fire's footage, and never credit one fire's impacts (e.g. an I-5 closure) to another.
+- **Footage:** mention the footage only in the opening; write the rest so any clip of the event fits. Narrate the right fire over the right fire's footage, and never credit one fire's impacts (e.g. an I-5 closure) to another. **Never credit the filmer or uploader in the narration (user, 21 Oct 2026):** no "filmed by…", "video from @…" or "a resident shared…" lines. Credits stay in `research/sources.csv` only.
 - **Spoken CTAs:** never join them to the story with "because". S01 ends with "Stay with us, because…". One mid-video line restates where, what and the latest number, then asks for the subscribe. One closing line comes after the recap. On-screen pills and tickers carry the rest.
 
 ## 1. Purpose and default brief
@@ -209,7 +230,7 @@ A major defect in earlier episodes was pixelated, blurry, low-bitrate footage (3
 ### Verifying and Logging Clips
 For each clip:
 1. Identify the earliest credible upload and verify date and location frame-by-frame.
-2. Check for old recycled footage (e.g. past floods from previous years). Old footage may be used as **archive** only when the video is about an event that has not happened yet (a forecast or warning, §0), logged as `archive <event, month year>`. It is never passed off as the current event, and it is never used for events that already happened.
+2. Check for old recycled footage (e.g. past floods from previous years). Old footage may be used as **archive** only when the video is about an event that has not happened yet (a forecast or warning, §0), logged as `archive <event, month year>`. It must show a past event of the same kind in the same country or region (no random vlogs). The narration never mentions it, never presents it as the current event, and it is never used for events that already happened.
 3. Confirm audio is authentic (run `python audio_scan.py` to ensure no copyrighted background music).
 4. Record rights/credit in `research/sources.csv`. Apply the official on-screen lower-third source attribution tag (`build_source_tag.py`, §9) to eyewitness clips, and list full institutional citations in the YouTube description `SOURCES` list.
 

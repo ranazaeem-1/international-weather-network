@@ -152,6 +152,8 @@ def build(ep: Path, notes, chapters_fn, crop, muted, backup=(), clips_dir=None, 
     D = {}
 
     def dur(c):
+        if c not in D and files[c].suffix.lower() in (".jpg", ".jpeg", ".png"):
+            D[c] = 6.0                                     # stills: render.py shows them for 6 s with a slow zoom
         if c not in D:
             D[c] = round(float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                                                          str(files[c])]).strip()) - 0.1, 2)

@@ -9,7 +9,7 @@ International Weather Network · Working production guide · Updated 15 October 
 - **Clips shorter than 11 s are used whole, uncut** (start to end; render.Pool never trims or starts them midway). They are welcome when sourcing, so do not discard good 6–10 s clips.
 - **Cold open ~20 s** (`E.cold_open(..., seconds=20)` default): the 1–2 strongest clips with their real sound.
 - **Clip audio: mute ONLY music** (user, 18 Oct). Speech in clips stays audible: eyewitnesses, reactions, people talking. Never replace or strip a clip's audio track when slicing. In `research/sources.csv`, log `sound: natural`, `speech` or `music`. In `gen_edl.py`, use `MUTED = E.muted_from_sources(EP)`, which mutes only clips logged with music. Picture rules are unchanged (no anchors, reporters on camera, TV bugs or burned-in text).
-- **Narration starts right after the cold open** with a line that anchors the footage ("The video you just saw was filmed Friday in San Clemente…") plus one open loop the video answers later ("…and what forecasters expect next could be worse").
+- **Narration starts right after the cold open** with an opening line from the rotating styles in "Script structure" below (not always "The video you just saw…") plus one open loop the video answers later ("…and what forecasters expect next could be worse").
 - **More narration: ~1,300–1,600 words, ~45–50 % of runtime (GWN measured 41–48 %)**, 15–17 one-paragraph chapters (see Script structure below), including the context chapters (science, history, what's next). Clip break after each chapter `tail=28`.
 - **Archive footage: only for events that have NOT happened yet (user, 20 Oct 2026, revised the same day).**
   - **Upcoming or warned events:** a forecast, an approaching storm, a warning just issued. Archive footage may be used, because no footage of the event exists yet.
@@ -42,14 +42,30 @@ International Weather Network · Working production guide · Updated 15 October 
   - **At intake, propose the split:** list the angles with the footage minutes for each, and suggest which videos to make before scripting.
 - Measured reference: `gwn-vs-iwn-comparison-2026-10-18.md`.
 
-### Narration voice and pronunciation (18 Oct 2026; audit in `research-voice-pronunciation-2026-10-18.md`)
+### Narration voice (user, 3 Nov 2026)
+- **Voice: edge-tts Andrew Multilingual −6% (free, fast).** It stays the voice for all videos (user decision, 3 Nov 2026). `voices/voices.json` has `"default": "andrew"`, and `make_narration.py` prints `Voice: andrew …` at the start of every run.
+- **The GWN-style ElevenLabs sample is saved, not used:** `voices/gwn-elevenlabs-sample.mp3`, with speed 1.0, stability 0.5 and similarity 0.75. `make_narration.py` can use it only with an ElevenLabs API key in `voices/elevenlabs.env` and `IWN_VOICE=gwn`. There is no key.
+- Local cloning of the sample was tried and dropped: this laptop has no NVIDIA GPU, so it was estimated at 30–60+ min per video, against 1–2 min for Andrew.
+
+### Pronunciation (18 Oct 2026; audit in `research-voice-pronunciation-2026-10-18.md`)
 - **No phonetic respellings.** Keep `SAY` in `make_narration.py` empty and write the real names in the script. Respellings like "Cap-ih-STRAH-no" made edge-tts spell capital syllables letter by letter. YouTube's captions showed "San Juan Caphsdn No" and "BH Loan Road". `make_narration.py` now refuses respellings with hyphens or capital syllables.
 - **Run `python qa_narration.py` after every narration** (faster-whisper medium.en; `--fast` uses small.en). It flags proper nouns the voice didn't say recognisably. Fix them by rewording, or as a last resort with a one-word lowercase `SAY` entry, then re-run.
 - GWN's voice was not identified: it matched none of 47 tested voices (edge-tts, ElevenLabs premade, OpenAI). It is higher-pitched (~135 Hz) and faster (~169 wpm) than Andrew Multilingual. Proper phoneme control would need paid Azure Speech (same Andrew voice, free tier available) or ElevenLabs.
 
 ### Script structure — GWN model (18 Oct 2026; full analysis in `research-gwn-script-structure-2026-10-18.md`)
 - **One paragraph per chapter** (55–90 words, 20–30 s spoken), then **one clip break of 25–30 s** (`tail=28`). 15–17 chapters, ~1,300–1,600 words. Never split a chapter into sentence fragments.
-- **Opening chapter (S01, after the ~20 s cold open):** point at the footage ("The video you just saw was filmed …"), then place + date, what happened with a speed/scale number, the human stakes number, one widening line, and one honest open question that a later fact answers ("Stay with us, because …").
+- **Opening chapter (S01, after the ~20 s cold open):** place + date, what happened with a speed/scale number, the human stakes number, one widening line, and one honest open question that a later fact answers ("Stay with us, because …").
+- **Rotate the opening line (user, 3 Nov 2026).** 13 of 16 scripts on 1–2 Nov opened "The video you just saw was filmed…"; GWN used a different opening in each of its 8 videos on 2 Nov. Pick the style that fits the story, never use the same style in two videos made the same day or back to back, and use "The video you just saw" at most once in six videos. Check the S01 openings of the day's other `episodes/*/script/narration.md` before writing.
+  1. **Repeat event:** "For the second time in a week, Ecuador's largest city went under."
+  2. **Record or shock fact first:** "On Sunday night, a lightning bolt nearly four times stronger than normal struck…"
+  3. **News first, footage second** (warnings, forecasts): "On Monday, Indonesia raised its highest rain alert… This footage shows why."
+  4. **Footage worked into the action:** "Swiftwater teams went street by street through the coast you just saw…"
+  5. **"Only part of it":** "…seawater poured knee-deep into homes. And the footage you just saw is only part of it."
+  6. **Rule of three:** "In this footage, the river has broken its banks, broken a bridge and broken a 20-year record."
+  7. **Classic + twist:** "This footage comes out of [place], where… Now it is Monday, and the warnings just got worse."
+- **Short date sentence:** after the first line, state the date on its own: "It is Monday, November 2nd, 2026." Don't pack place, weekday and date into one long first sentence.
+- **Early status chapter (follow-ups and multi-day events):** S02 can be "Here is where things stand this Monday…" (alerts, closures, latest counts).
+- **One comparison an American viewer knows** in every video about an event outside the US: "an island a little bigger than California", "like an NWS watch versus a warning". Explain foreign alert levels in plain words.
 - **Arc for fires:** start and why the place matters → growth by clock time → homes → evacuations (explain what the order means) → the firefight → **the science (e.g. Santa Ana winds) and history at about 30–45 % of runtime** → roads/power/air → other fires (distance + direction) → official response → what's next → an "As of [time, date]" recap. Floods: same skeleton plus victim chapters, with the "why it got so bad" chapter late as the answer to the opening question.
 - **Hand-offs, not teasers:** end each paragraph by naming the next subject plainly; start the next paragraph on that subject. No "And it came at a cost." style cliffhangers, and no promising more than the facts deliver.
 - **Language:** ~14-word sentences, plain verbs, define terms right away ("zero containment means…"), attribute every number to a source and time, use relatable comparisons. Do not read zone codes or addresses out as lists.
@@ -291,7 +307,7 @@ Do not imply that a specific rescue, damage report, or locality is shown unless 
 
 ## 8. Narration and audio
 
-1. Approved voice: edge-tts `en-US-AndrewMultilingualNeural` at rate −6% (free; chosen by the user on 8 Oct 2026, replacing `en-US-AvaNeural`). Generate with `project/make_narration.py` — one MP3 + SRT per block.
+1. Approved voice: edge-tts `en-US-AndrewMultilingualNeural` at rate −6% (free; chosen 8 Oct 2026, confirmed 3 Nov 2026). The GWN-style ElevenLabs sample is saved in `voices/` but unused (no API key). Generate with `make_narration.py`, which writes one MP3 + SRT per block.
 2. Check pronunciations of towns, rivers, people, and agencies (respellings go in the `SAY` table of `make_narration.py`).
 3. Run `project/qa_narration.py` — transcribes each block and diffs it against the script; fix any omissions or misread numbers.
 4. **No music.** The video uses narration plus the clips' own sound only.
@@ -327,7 +343,7 @@ As a starting mix target, aim near −14 LUFS integrated and at or below −1 dB
 
 ### The pipeline (in each episode's `project/` folder — copy from the latest episode, e.g. `episodes/2026-10-07-france-flash-floods/project/`)
 
-Check that `VOICE` in `make_narration.py` is `en-US-AndrewMultilingualNeural` after copying.
+Check that the first line of `make_narration.py` output says `Voice: andrew (edge, en-US-AndrewMultilingualNeural -6%)`.
 
 | Step | Command |
 |---|---|

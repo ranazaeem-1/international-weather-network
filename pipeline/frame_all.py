@@ -22,6 +22,6 @@ def go(job):
         return c + " FAIL " + str(e)[-200:]
 
 
-with ThreadPoolExecutor(6) as ex:
+with ThreadPoolExecutor(int(__import__("os").environ.get("IWN_WORKERS", 6))) as ex:   # IWN_WORKERS=1 to yield CPU to another episode
     for r in ex.map(go, jobs.values()):
         print(r, flush=True)

@@ -1,5 +1,10 @@
-"""Generate per-segment narration (edge-tts, en-US-AndrewMultilingualNeural) + word-timed subtitles from script/narration.md."""
-import asyncio, json, re, subprocess
+"""Generate per-segment narration + subtitles from script/narration.md.
+
+Voice comes from <project>/voices/voices.json ("default", or IWN_VOICE=<name>):
+  gwn    -> ElevenLabs (key in voices/elevenlabs.env), saved but unused (no key)
+  andrew -> edge-tts en-US-AndrewMultilingualNeural -6% (default, user 3 Nov 2026)
+"""
+import asyncio, base64, json, os, re, subprocess, urllib.request, urllib.error
 from pathlib import Path
 import edge_tts
 import edge_tts.communicate as _etc
@@ -14,6 +19,101 @@ SCRIPT = EP / "script" / "narration.md"
 OUT = EP / "audio" / "narration"
 VOICE = "en-US-AndrewMultilingualNeural"
 RATE = "-6%"
+
+
+def _voices_dir():
+    for p in Path(__file__).resolve().parents:
+        if (p / "voices" / "voices.json").exists():
+            return p / "voices"
+    return None
+
+
+VDIR = _voices_dir()
+VCFG = json.loads((VDIR / "voices.json").read_text(encoding="utf8")) if VDIR else {"default": "andrew", "voices": {}}
+VNAME = os.environ.get("IWN_VOICE") or VCFG.get("default", "andrew")
+V = VCFG["voices"].get(VNAME, {"engine": "edge"})
+ENGINE = V.get("engine", "edge")
+if ENGINE == "edge":
+    VOICE, RATE = V.get("voice", VOICE), V.get("rate", RATE)
+CACHE_TAG = "" if ENGINE == "edge" else f"[{VNAME}:{V.get('model_id')}:{json.dumps(V.get('voice_settings'), sort_keys=True)}]"
+
+
+def _eleven_env():
+    env = {}
+    f = VDIR / "elevenlabs.env" if VDIR else None
+    if f and f.exists():
+        for line in f.read_text(encoding="utf8").splitlines():
+            if "=" in line and not line.strip().startswith("#"):
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip()
+    key = os.environ.get("ELEVENLABS_API_KEY") or env.get("ELEVENLABS_API_KEY")
+    if not key:
+        raise SystemExit(f"No ElevenLabs key: put ELEVENLABS_API_KEY=... in {f} (or run with IWN_VOICE=andrew).")
+    return key, (env.get("VOICE_ID") or V.get("voice_id") or "")
+
+
+def _eleven_req(url, key, body=None):
+    req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"xi-api-key": key, "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        msg = e.read().decode("utf8", "replace")[:400]
+        if e.code in (401, 402, 403, 422):   # bad key / no credits / bad request: retrying won't help
+            raise SystemExit(f"ElevenLabs {e.code}: {msg}")
+        raise RuntimeError(f"ElevenLabs {e.code}: {msg}")
+
+
+_EL = {}
+
+
+def _eleven_voice():
+    if not _EL:
+        key, vid = _eleven_env()
+        if not vid:
+            want = V.get("voice_name_contains", VNAME).lower()
+            vs = _eleven_req("https://api.elevenlabs.io/v1/voices", key).get("voices", [])
+            hits = [v for v in vs if want in v.get("name", "").lower()]
+            if len(hits) != 1:
+                raise SystemExit(f"Found {len(hits)} ElevenLabs voices named like '{want}': "
+                                 + ", ".join(f"{v['name']}={v['voice_id']}" for v in (hits or vs)[:15])
+                                 + f". Set VOICE_ID in {VDIR / 'elevenlabs.env'}.")
+            vid = hits[0]["voice_id"]
+            print(f"ElevenLabs voice: {hits[0]['name']} ({vid})", flush=True)
+        _EL.update(key=key, vid=vid)
+    return _EL["key"], _EL["vid"]
+
+
+def _srt_time(t):
+    ms = int(round(t * 1000))
+    return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
+
+
+def _sentence_srt(chars, starts, ends):
+    """Sentence-level SRT from ElevenLabs character alignment (same granularity as edge SentenceBoundary)."""
+    cues, buf, t0 = [], "", None
+    for i, c in enumerate(chars):
+        if t0 is None and not c.isspace():
+            t0 = starts[i]
+        buf += c
+        nxt = chars[i + 1] if i + 1 < len(chars) else " "
+        if (c in ".!?" and nxt.isspace()) or i == len(chars) - 1:
+            if buf.strip():
+                cues.append((t0, ends[i], buf.strip()))
+            buf, t0 = "", None
+    return "\n".join(f"{n}\n{_srt_time(a)} --> {_srt_time(b)}\n{t}\n" for n, (a, b, t) in enumerate(cues, 1))
+
+
+def tts_eleven(seg_id, text):
+    key, vid = _eleven_voice()
+    body = {"text": text, "model_id": V.get("model_id", "eleven_v3"), "voice_settings": V.get("voice_settings", {})}
+    r = _eleven_req(f"https://api.elevenlabs.io/v1/text-to-speech/{vid}/with-timestamps?output_format=mp3_44100_128", key, body)
+    (OUT / f"{seg_id}.mp3").write_bytes(base64.b64decode(r["audio_base64"]))
+    al = r.get("normalized_alignment") or r.get("alignment") or {}
+    srt = _sentence_srt(al.get("characters", []), al.get("character_start_times_seconds", []),
+                        al.get("character_end_times_seconds", [])) if al else ""
+    (OUT / f"{seg_id}.srt").write_text(srt, encoding="utf8")
 
 # Pronunciation fixes applied only to the spoken text
 # Pronunciation overrides. Leave EMPTY by default: write real place names in the script (18 Oct audit -
@@ -48,6 +148,8 @@ def _spoken(text):
 
 async def tts(seg_id, text):
     spoken = _spoken(text)
+    if ENGINE == "elevenlabs":
+        return await asyncio.to_thread(tts_eleven, seg_id, spoken)
     comm = edge_tts.Communicate(spoken, VOICE, rate=RATE, boundary="SentenceBoundary")
     sub = edge_tts.SubMaker()
     with open(OUT / f"{seg_id}.mp3", "wb") as f:
@@ -65,6 +167,7 @@ def duration(p):
 
 async def main():
     _check_say()
+    print(f"Voice: {VNAME} ({ENGINE}{', ' + V.get('model_id', '') if ENGINE != 'edge' else ', ' + VOICE + ' ' + RATE})", flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
     manifest = []
     for seg_id, title, body in segments():
@@ -75,11 +178,11 @@ async def main():
             done = OUT / f"{pid}.mp3"
             for attempt in range(10):   # edge-tts drops or hangs connections now and then
                 if done.exists() and done.stat().st_size > 2000 and (OUT / f"{pid}.ok").exists() \
-                        and (OUT / f"{pid}.ok").read_text(encoding="utf8") == _spoken(para):   # cache key includes SAY, so a new fix regenerates
+                        and (OUT / f"{pid}.ok").read_text(encoding="utf8") == CACHE_TAG + _spoken(para):   # cache key includes SAY + voice, so a fix or voice switch regenerates
                     break
                 try:
-                    await asyncio.wait_for(tts(pid, para), timeout=60)
-                    (OUT / f"{pid}.ok").write_text(_spoken(para), encoding="utf8")
+                    await asyncio.wait_for(tts(pid, para), timeout=60 if ENGINE == "edge" else 180)
+                    (OUT / f"{pid}.ok").write_text(CACHE_TAG + _spoken(para), encoding="utf8")
                     break
                 except Exception as e:
                     print('retry', pid, type(e).__name__, flush=True)

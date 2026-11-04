@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Carver card: document</title>
+<link rel="stylesheet" href="../../brand-kit/src/brand.css"><link rel="stylesheet" href="card.css"><script src="card.js"></script>
+</head><body><div class="stage" id="stage"></div>
+<script>
+// document card: official statement on a paper-white panel, monospace body, highlighter sweep over key phrases.
+CW.boot(async (S, stage) => {
+  const { el, esc, rich, tween, loop, enter, wipe, E, lerp, clamp } = CW;
+  if (S.bg_image) await CW.loadImg(S.bg_image);
+  CW.background(S, stage);
+  let top = 150;
+  if (S.kicker) { const k = el("span", "kchip zc", esc(S.kicker), stage); k.style.position = "absolute"; k.style.left = "60px"; k.style.top = "132px"; wipe(k, .1); top = 196; }
+  const wrap = el("div", "docwrap", null, stage); wrap.style.top = top + "px";
+  const doc = el("div", "doc zc", `${S.agency ? `<div class="ag">${esc(S.agency)}</div>` : ""}${S.product ? `<div class="pr">${esc(S.product)}</div>` : ""}
+    ${S.issued ? `<div class="is">${esc(S.issued)}</div>` : ""}<div class="rule"></div><div class="body"><div class="tx"></div></div>${S.stamp ? `<div class="stamp">${esc(S.stamp)}</div>` : ""}`, wrap);
+  // body text with highlight phrases wrapped in spans (first match of each phrase)
+  const body = doc.querySelector(".body"), tx = body.querySelector(".tx");
+  let html = esc(S.body || ""); const HL = (S.highlights || []).map(h => typeof h === "string" ? { phrase: h } : h);
+  HL.forEach((h, i) => {
+    const ph = esc(h.phrase); let k = html.indexOf(ph);
+    if (k < 0) k = html.toLowerCase().indexOf(ph.toLowerCase());
+    if (k < 0) { console.warn("highlight phrase not found: " + h.phrase); return; }
+    html = html.slice(0, k) + `<span class="hp" data-i="${i}">` + html.slice(k, k + ph.length) + "</span>" + html.slice(k + ph.length);
+  });
+  tx.innerHTML = html;
+  CW.fit(wrap, CW.limit(S) - 6 - ((S.push ?? 1.025) - 1) * 520, { min: .5 });   // headroom for the push
+  // highlighter: one bar per rendered line, swept left to right in reading order
+  const b0 = body.getBoundingClientRect();
+  tx.querySelectorAll(".hp").forEach(sp => {
+    const h = HL[+sp.dataset.i], at = h.at ?? 1.6, rects = [...sp.getClientRects()].filter(r => r.width > 2);
+    const total = rects.reduce((a, r) => a + r.width, 0); let acc = 0;
+    const sweep = h.dur ?? clamp(total / 1500, .45, 1.6);
+    rects.forEach(r => {
+      const bar = el("div", "hl", null, body);
+      Object.assign(bar.style, { left: (r.left - b0.left - 4) + "px", top: (r.top - b0.top + r.height * .08) + "px", width: (r.width + 8) + "px", height: (r.height * .86) + "px" });
+      if (h.color) bar.style.background = h.color;
+      const t0 = at + sweep * acc / total, d = sweep * r.width / total; acc += r.width;
+      tween(t0, Math.max(.05, d), q => bar.style.transform = `scaleX(${q.toFixed(4)})`, CW.E.lin);
+    });
+  });
+  // panel rises in, then a slow push so the still never freezes
+  enter(doc, S.at ?? .25, { y: 30, dur: .6 });
+  loop(t => { wrap.style.transform = `scale(${lerp(1, S.push ?? 1.025, clamp(t / S.dur)).toFixed(5)})`; });
+});
+</script></body></html>

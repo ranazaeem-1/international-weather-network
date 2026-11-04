@@ -1,0 +1,147 @@
+/* Carver Weather Desk — design tokens + broadcast components (1920x1080 canvas) */
+@font-face { font-family: "Barlow Condensed"; font-weight: 500; src: url("../fonts/BarlowCondensed-Medium.ttf"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("../fonts/BarlowCondensed-SemiBold.ttf"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("../fonts/BarlowCondensed-Bold.ttf"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("../fonts/BarlowCondensed-ExtraBold.ttf"); }
+@font-face { font-family: "Inter"; font-weight: 100 900; src: url("../fonts/Inter-Variable.ttf"); }
+
+:root {
+  --ink: #050C1A;        /* deepest navy, backgrounds */
+  --navy: #0A1B38;       /* panels */
+  --navy-2: #10295A;     /* panel highlight */
+  --royal: #1C4FD0;      /* studio blue, accents */
+  --sky: #5CC8FF;        /* data accent, radar */
+  --crimson: #D7192F;    /* alert / brand accent (Glenn's tie) */
+  --crimson-dk: #9E0F22;
+  --amber: #FFB51F;      /* watches / warnings levels */
+  --white: #FFFFFF;
+  --paper: #E9EEF7;
+  --steel: #93A3BF;
+  --glass: rgba(8, 22, 48, 0.78);
+  --glass-hi: rgba(28, 79, 208, 0.18);
+  --cond: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --sans: "Inter", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+body { font-family: var(--sans); color: var(--white); -webkit-font-smoothing: antialiased; }
+.stage { position: absolute; inset: 0; overflow: hidden; }
+.bg { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.vignette { position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(5,12,26,.35) 0%, rgba(5,12,26,0) 22%, rgba(5,12,26,0) 58%, rgba(5,12,26,.75) 100%); }
+
+/* ---------- brand bug (top-left) ---------- */
+.bug { position: absolute; left: 44px; top: 38px; display: flex; align-items: center; gap: 12px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.45)); opacity: .92; }
+.bug svg { width: 54px; height: 54px; }
+.bug .wm { line-height: .86; }
+.bug .wm b { display: block; font: 800 34px/0.9 var(--cond); letter-spacing: .06em; }
+.bug .wm i { display: block; font: 600 13px/1 var(--sans); font-style: normal; letter-spacing: .34em; color: var(--paper); margin-top: 5px; }
+
+/* ---------- ticker ---------- */
+.ticker { position: absolute; left: 0; right: 0; bottom: 0; height: 66px; display: flex; align-items: stretch;
+  background: linear-gradient(180deg, #0D2250 0%, #071430 100%); border-top: 2px solid rgba(92,200,255,.35); }
+.ticker .badge { display: flex; align-items: center; gap: 10px; padding: 0 22px 0 26px; background: var(--crimson);
+  font: 800 30px/1 var(--cond); letter-spacing: .05em; position: relative; }
+.ticker .badge svg { width: 34px; height: 34px; }
+.ticker .badge::after { content: ""; position: absolute; right: -22px; top: 0; bottom: 0; width: 22px;
+  background: var(--crimson); clip-path: polygon(0 0, 100% 0, 0 100%); }
+.ticker .label { display: flex; align-items: center; padding: 0 22px 0 40px; background: #F2F5FB; color: var(--navy);
+  font: 800 26px/1 var(--cond); letter-spacing: .08em; }
+.ticker .run { flex: 1; display: flex; align-items: center; gap: 26px; padding-left: 26px; white-space: nowrap; overflow: hidden;
+  font: 600 27px/1 var(--sans); letter-spacing: -.005em; }
+.ticker .run .sep { width: 10px; height: 10px; background: var(--crimson); transform: rotate(45deg); flex: none; }
+.ticker .run b { font-weight: 800; color: var(--amber); }
+.ticker .clock { display: flex; align-items: center; padding: 0 26px; background: rgba(0,0,0,.35);
+  font: 700 28px/1 var(--cond); letter-spacing: .06em; color: var(--paper); }
+
+/* ---------- headline strap (lower third) ---------- */
+.strap { position: absolute; left: 60px; bottom: 96px; width: max-content; max-width: 1300px; }
+/* headline rule: one line, <= 40 characters; the subline carries the detail */
+.strap h1 { white-space: nowrap; }
+.strap .kicker { display: inline-flex; align-items: stretch; height: 44px; margin-bottom: 0; }
+.strap .kicker .tag { display: flex; align-items: center; padding: 0 18px; background: var(--crimson);
+  font: 800 28px/1 var(--cond); letter-spacing: .1em; }
+.strap .kicker .tag .dot { width: 11px; height: 11px; border-radius: 50%; background: #fff; margin-right: 11px; box-shadow: 0 0 0 4px rgba(255,255,255,.25); }
+.strap .kicker .loc { display: flex; align-items: center; padding: 0 18px; background: var(--white); color: var(--navy);
+  font: 800 28px/1 var(--cond); letter-spacing: .08em; }
+.strap .main { position: relative; background: var(--glass); backdrop-filter: blur(14px);
+  border-left: 10px solid var(--crimson); padding: 16px 30px 18px 26px;
+  box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+.strap .main::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: linear-gradient(90deg, var(--sky), rgba(92,200,255,0)); }
+.strap h1 { font: 800 66px/1.0 var(--cond); letter-spacing: .005em; text-transform: uppercase; }
+.strap h1 em { font-style: normal; color: var(--amber); }
+.strap p { font: 500 27px/1.3 var(--sans); color: var(--paper); margin-top: 8px; }
+.strap p b { font-weight: 700; color: #fff; }
+
+/* ---------- host: A — Desk Window ---------- */
+.hostA { position: absolute; right: 40px; top: 38px; width: 536px; }
+.hostA .frame { position: relative; width: 536px; height: 302px; border-radius: 10px; overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,.55), 0 0 0 1.5px rgba(255,255,255,.28) inset; }
+.hostA .frame .vid { position: absolute; inset: 0; background-repeat: no-repeat; }
+.hostA .frame::after { content: ""; position: absolute; inset: 0; border-radius: 10px;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.22), inset 0 -60px 60px -30px rgba(5,12,26,.55); }
+.hostA .topbar { position: absolute; left: 0; right: 0; top: 0; height: 5px; background: linear-gradient(90deg, var(--crimson) 0 34%, var(--sky) 34% 100%); z-index: 3; }
+.hostA .live { position: absolute; left: 14px; top: 18px; z-index: 3; display: flex; align-items: center; gap: 8px;
+  padding: 6px 11px 6px 10px; background: rgba(5,12,26,.72); border-radius: 4px; font: 700 19px/1 var(--cond); letter-spacing: .12em; }
+.hostA .live .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--crimson); box-shadow: 0 0 0 4px rgba(215,25,47,.3); }
+.hostA .name { position: absolute; left: -14px; bottom: -22px; z-index: 4; display: flex; align-items: stretch; height: 46px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+.hostA .name b { display: flex; align-items: center; padding: 0 16px; background: var(--white); color: var(--navy); font: 800 28px/1 var(--cond); letter-spacing: .06em; }
+.hostA .name i { display: flex; align-items: center; padding: 0 14px; background: var(--crimson); font: 700 20px/1 var(--cond); font-style: normal; letter-spacing: .16em; }
+
+/* ---------- host: B — Breakout (cut-out over angled glass) ---------- */
+.hostB { position: absolute; right: 0; top: 0; width: 640px; height: 470px; }
+.hostB .panel { position: absolute; right: 40px; top: 118px; width: 560px; height: 330px;
+  background: linear-gradient(160deg, rgba(28,79,208,.55) 0%, rgba(10,27,56,.92) 55%, rgba(5,12,26,.95) 100%);
+  clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%);
+  box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+.hostB .panel::before { content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 1px, transparent 1px 38px),
+              repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 38px); }
+.hostB .edge { position: absolute; right: 40px; top: 118px; width: 560px; height: 6px; background: linear-gradient(90deg, var(--crimson), var(--sky)); clip-path: polygon(1% 0, 100% 0, 100% 100%, 0 100%); }
+.hostB .cut { position: absolute; right: 40px; top: 18px; width: 560px; height: 430px; background-repeat: no-repeat;
+  -webkit-mask-image: linear-gradient(180deg, #000 0 88%, transparent 100%); z-index: 2; filter: drop-shadow(0 10px 20px rgba(0,0,0,.45)); }
+.hostB .name { position: absolute; right: 40px; top: 448px; width: 560px; z-index: 3; display: flex; height: 44px; }
+.hostB .name b { flex: none; display: flex; align-items: center; padding: 0 18px; background: var(--white); color: var(--navy); font: 800 28px/1 var(--cond); letter-spacing: .06em; }
+.hostB .name i { flex: 1; display: flex; align-items: center; padding: 0 16px; background: var(--crimson); font: 700 20px/1 var(--cond); font-style: normal; letter-spacing: .16em; }
+
+/* ---------- host: C — Radar Lens ---------- */
+.hostC { position: absolute; right: 56px; top: 34px; width: 360px; height: 410px; }
+.hostC .ring { position: absolute; left: 0; top: 0; width: 360px; height: 360px; }
+.hostC .lens { position: absolute; left: 30px; top: 30px; width: 300px; height: 300px; border-radius: 50%; overflow: hidden;
+  background-repeat: no-repeat; box-shadow: 0 18px 44px rgba(0,0,0,.55), inset 0 0 0 3px rgba(255,255,255,.25); }
+.hostC .name { position: absolute; left: 50%; top: 318px; transform: translateX(-50%); display: flex; height: 44px; white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(0,0,0,.45); }
+.hostC .name b { display: flex; align-items: center; padding: 0 16px; background: var(--white); color: var(--navy); font: 800 28px/1 var(--cond); letter-spacing: .06em; }
+.hostC .name i { display: flex; align-items: center; padding: 0 14px; background: var(--crimson); font: 700 20px/1 var(--cond); font-style: normal; letter-spacing: .16em; }
+
+/* ---------- map / data card ---------- */
+.cardtitle { position: absolute; left: 60px; top: 132px; }
+.cardtitle .k { display: inline-block; padding: 7px 14px; background: var(--crimson); font: 800 24px/1 var(--cond); letter-spacing: .14em; }
+.cardtitle h2 { margin-top: 10px; font: 800 72px/0.95 var(--cond); text-transform: uppercase; text-shadow: 0 4px 18px rgba(0,0,0,.55); }
+.cardtitle p { margin-top: 10px; font: 500 26px/1.3 var(--sans); color: var(--paper); text-shadow: 0 2px 10px rgba(0,0,0,.7); }
+.pin { position: absolute; display: flex; align-items: center; gap: 10px; transform: translate(-11px, -50%); }
+.pin .d { width: 22px; height: 22px; border-radius: 50%; background: var(--crimson); border: 4px solid #fff; box-shadow: 0 0 0 7px rgba(215,25,47,.28); }
+.pin .t { padding: 7px 13px; background: rgba(5,12,26,.82); border-left: 4px solid var(--sky); font: 700 28px/1 var(--cond); letter-spacing: .04em; white-space: nowrap; }
+.legend { position: absolute; left: 60px; bottom: 96px; display: flex; gap: 10px; }
+.legend div { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: rgba(5,12,26,.82); font: 600 22px/1 var(--sans); }
+.legend span { width: 26px; height: 16px; border-radius: 3px; }
+
+.stat { position: absolute; display: flex; flex-direction: column; padding: 18px 26px 20px; background: var(--glass);
+  border-top: 5px solid var(--amber); box-shadow: 0 18px 40px rgba(0,0,0,.4); }
+.stat small { font: 700 22px/1 var(--cond); letter-spacing: .16em; color: var(--steel); }
+.stat strong { font: 800 118px/0.9 var(--cond); margin-top: 8px; }
+.stat strong sub { font-size: 52px; vertical-align: baseline; margin-left: 6px; color: var(--amber); }
+.stat span { font: 500 22px/1.3 var(--sans); color: var(--paper); margin-top: 8px; }
+
+/* ---------- full host lower third ---------- */
+.super { position: absolute; left: 120px; bottom: 120px; }
+.super .n { display: inline-flex; height: 70px; align-items: center; padding: 0 26px; background: var(--white); color: var(--navy);
+  font: 800 52px/1 var(--cond); letter-spacing: .04em; }
+.super .r { display: flex; align-items: center; height: 46px; padding: 0 22px; background: var(--crimson); width: max-content;
+  font: 700 26px/1 var(--cond); letter-spacing: .18em; }
+
+.sample { position: absolute; right: 40px; bottom: 76px; font: 600 13px/1 var(--sans); letter-spacing: .2em; color: rgba(255,255,255,.45); }

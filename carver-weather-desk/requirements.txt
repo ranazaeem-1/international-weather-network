@@ -1,0 +1,13 @@
+# Carver Weather Desk pipeline (Python 3.12). After installing: python -m playwright install chromium
+playwright>=1.47            # HTML/CSS overlays and cards rendered frame by frame
+faster-whisper>=1.0         # word-level sync of the script to Glenn's HeyGen voice
+opencv-python-headless>=5.0 # face-placed crop of the HeyGen video (YuNet)
+numpy
+scipy                       # audio mix + procedural sound design
+pillow
+pyyaml
+num2words
+pycapcut==0.0.3             # CapCut draft builder
+pymediainfo
+edge-tts                    # stand-in voice for pipeline tests only (prep_host.py --standin)
+# GPU speech sync (optional, NVIDIA): pip install nvidia-cublas-cu12 "nvidia-cudnn-cu12>=9,<10"

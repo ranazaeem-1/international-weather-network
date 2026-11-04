@@ -1,0 +1,128 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Carver card: map</title>
+<link rel="stylesheet" href="../../brand-kit/src/brand.css"><link rel="stylesheet" href="card.css"><script src="card.js"></script>
+</head><body><div class="stage" id="stage"></div>
+<script>
+// map card: base image (Ken Burns) or transparent overlay for a video base; SVG overlays locked to the projection.
+CW.boot(async (S, stage) => {
+  const { el, svgEl, esc, color, tween, loop, enter, wipe, lerp, clamp, E } = CW;
+  const V = S._view;                       // computed by make_card.py: {x0, y0, k, img_w, img_h} in natural image px
+  if (!V) throw new Error("map spec needs _view (render it with make_card.py)");
+  const toPx = CW.projector(S.projection || { type: "goes_conus" }, V.img_w, V.img_h);
+  const scr = (lat, lon) => { const [u, v] = toPx(lon, lat); return [(u - V.x0) * V.k, (v - V.y0) * V.k]; };
+  window.cardScr = scr;                     // for QA: page.evaluate("cardScr(lat, lon)")
+
+  // --- base (zooms) ---
+  const wBase = el("div", "world", null, stage);
+  if (S._base_image && !S._alpha) {
+    const img = await CW.loadImg(S._base_image);
+    img.className = "mapimg";
+    Object.assign(img.style, { width: V.img_w * V.k + "px", height: V.img_h * V.k + "px", left: -V.x0 * V.k + "px", top: -V.y0 * V.k + "px" });
+    wBase.appendChild(img);
+  }
+  if (S.dim) el("div", "mapdim", null, wBase).style.background = `rgba(5,12,26,${S.dim})`;
+  if (S.gradient !== false) el("div", "mapgrad", null, stage);
+  // --- overlays (same transform as the base) ---
+  const wOv = el("div", "world", null, stage);
+  const svg = svgEl("svg", { class: "ov", width: 1920, height: 1080, viewBox: "0 0 1920 1080" }, wOv);
+  const defs = svgEl("defs", {}, svg);
+  svgEl("filter", { id: "sh", x: "-20%", y: "-20%", width: "140%", height: "140%" }, defs).innerHTML =
+    '<feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#050C1A" flood-opacity=".7"/>';
+
+  // state outlines
+  if (S._states_lines) {
+    const o = typeof S.states === "object" ? S.states : {};
+    const d = S._states_lines.map(l => CW.ringPath(l, scr, false)).join("");
+    const p = svgEl("path", { d, fill: "none", stroke: o.color || "#FFFFFF", "stroke-width": o.width ?? 1.4, "stroke-linejoin": "round",
+      opacity: o.opacity ?? .38 }, svg);
+    const at = o.at ?? 0;
+    tween(at, .6, q => p.style.opacity = (o.opacity ?? .38) * q);
+  }
+
+  // polygons: fill 30-40 % + a stroke that draws in
+  (S.polygons || []).forEach((pg, i) => {
+    const col = color(pg.color || pg.kind, "crimson"), at = pg.at ?? (.5 + .12 * i), fo = pg.fill_opacity ?? .35;
+    const d = (pg._rings || []).map(r => CW.ringPath(r, scr, true)).join("");
+    if (!d) { console.warn("polygon " + i + " has no geometry"); return; }
+    const g = svgEl("g", {}, svg);
+    const fill = svgEl("path", { d, fill: col, "fill-rule": "evenodd", stroke: "none", opacity: 0 }, g);
+    const line = svgEl("path", { d, fill: "none", stroke: pg.stroke ? color(pg.stroke) : col, "stroke-width": pg.width ?? 3.5, "stroke-linejoin": "round", filter: "url(#sh)" }, g);
+    const L = line.getTotalLength();
+    line.style.strokeDasharray = `${L} ${L}`;
+    tween(at, pg.draw ?? 1.0, q => { line.style.strokeDashoffset = L * (1 - q); line.style.opacity = q > 0 ? 1 : 0; }, E.inout);
+    tween(at + .25, .7, q => fill.setAttribute("opacity", fo * q));
+    if (pg.label) {
+      let x, y;
+      if (pg.label_at) [x, y] = scr(pg.label_at[0], pg.label_at[1]); else { const b = fill.getBBox(); x = b.x + b.width / 2; y = b.y + b.height / 2; }
+      const lb = el("div", "plabel zc", esc(pg.label), wOv);
+      lb.style.left = x + "px"; lb.style.top = y + "px"; lb.style.setProperty("--lc", col);
+      enter(lb, at + .5, { y: 10, base: "translate(-50%, -50%)" });
+    }
+  });
+
+  // dashed arrows/paths drawn along a lat/lon list ("latlon": [[lat, lon], ...] or "lonlat": [[lon, lat], ...])
+  (S.arrows || []).forEach((ar, i) => {
+    const pts = ar.latlon ? ar.latlon.map(([la, lo]) => scr(la, lo)) : (ar.lonlat || []).map(([lo, la]) => scr(la, lo));
+    if (pts.length < 2) return;
+    const col = color(ar.color, "white"), w = ar.width ?? 7, at = ar.at ?? (.8 + .15 * i), dr = ar.draw ?? 1.4;
+    const d = ar.smooth === false ? "M" + pts.map(p => p.join(" ")).join(" L") : CW.smoothPath(pts);
+    const id = "am" + i, mask = svgEl("mask", { id, maskUnits: "userSpaceOnUse", x: -200, y: -200, width: 2320, height: 1480 }, defs);
+    const mp = svgEl("path", { d, fill: "none", stroke: "#fff", "stroke-width": w * 4, "stroke-linecap": "butt", "stroke-linejoin": "round" }, mask);
+    const g = svgEl("g", { filter: "url(#sh)" }, svg);
+    const dash = ar.dash === false ? null : (ar.dash || "20 13");
+    const vis = svgEl("path", { d, fill: "none", stroke: col, "stroke-width": w, "stroke-linecap": "round", "stroke-linejoin": "round", mask: `url(#${id})` }, g);
+    if (dash) vis.setAttribute("stroke-dasharray", dash);
+    const hs = w * 3.6;
+    const head = svgEl("path", { d: `M ${hs * .55} 0 L ${-hs * .6} ${-hs * .62} L ${-hs * .3} 0 L ${-hs * .6} ${hs * .62} Z`, fill: col, opacity: 0 }, g);
+    const L = vis.getTotalLength();
+    mp.style.strokeDasharray = `${L + 10} ${L + 10}`;
+    let prog = 0;
+    tween(at, dr, q => {
+      prog = q; mp.style.strokeDashoffset = (L + 10) * (1 - q);
+      const s = Math.max(.5, q * L), a = vis.getPointAtLength(Math.max(0, s - 8)), b = vis.getPointAtLength(s);
+      const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+      head.setAttribute("transform", `translate(${b.x.toFixed(1)} ${b.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+      head.setAttribute("opacity", q > .02 && ar.head !== false ? 1 : 0);
+    }, E.inout);
+    if (dash && ar.march !== false) loop(t => vis.style.strokeDashoffset = (-(t * (ar.speed ?? 26))).toFixed(1));   // dashes flow toward the head
+    if (ar.label) {
+      const lp = vis.getPointAtLength(L * (ar.label_pos ?? .5));
+      const lb = el("div", "plabel zc", esc(ar.label), wOv);
+      lb.style.left = lp.x + "px"; lb.style.top = (lp.y - 34) + "px"; lb.style.setProperty("--lc", col === "#FFFFFF" ? CW.PAL.sky : col);
+      enter(lb, at + dr * .6, { y: 10, base: "translate(-50%, -50%)" });
+    }
+  });
+
+  // pins: dot pops, label wipes in, slow radar ping afterwards
+  (S.pins || []).forEach((pn, i) => {
+    const [x, y] = scr(pn.lat, pn.lon), at = pn.at ?? (.55 + .1 * i), col = color(pn.color, "crimson");
+    const pin = el("div", "pin zc", `<span class="ring"></span><span class="d"></span><span class="t">${esc(String(pn.name).toUpperCase())}</span>`, wOv);
+    pin.style.left = x.toFixed(1) + "px"; pin.style.top = y.toFixed(1) + "px"; pin.style.setProperty("--pc", col);
+    const d = pin.querySelector(".d"), t = pin.querySelector(".t"), ring = pin.querySelector(".ring");
+    if (col !== CW.PAL.crimson) d.style.boxShadow = `0 0 0 7px ${col}47`;
+    const lw = t.getBoundingClientRect().width;
+    let side = pn.side || "auto";
+    if (side === "auto") side = (x + 34 + lw > 1860 || (x + 34 + lw > 1130 && y < 495)) && x - 34 - lw > 60 ? "left" : "right";
+    if (side === "left") pin.classList.add("left");
+    tween(at, .45, q => { d.style.opacity = q; d.style.transform = `scale(${lerp(.35, 1, q)})`; });
+    tween(at + .1, .5, q => { t.style.opacity = q > 0 ? 1 : 0; t.style.clipPath = side === "left" ? `inset(0 0 0 ${(1 - q) * 100}%)` : `inset(0 ${(1 - q) * 100}% 0 0)`;
+      t.style.transform = `translateX(${(side === "left" ? 10 : -10) * (1 - q)}px)`; });
+    if (pn.pulse !== false) loop(tt => { const ph = tt - at - .6; if (ph < 0) { ring.style.opacity = 0; return; }
+      const f = (ph % 2.4) / 2.4; ring.style.opacity = (.55 * (1 - f)).toFixed(3); ring.style.transform = `scale(${(1 + 1.7 * E.cubic(f)).toFixed(3)})`; });
+  });
+
+  // --- Ken Burns (image bases only) ---
+  const z = S._video ? [1, 1] : (S.zoom || [1, 1.06]);
+  const [fx, fy] = S.focus ? scr(S.focus[0], S.focus[1]) : [960, 540];
+  for (const w of [wBase, wOv]) w.style.transformOrigin = `${fx.toFixed(1)}px ${fy.toFixed(1)}px`;
+  loop(t => { const s = lerp(Math.max(1, z[0]), Math.max(1, z[1]), clamp(t / S.dur)).toFixed(5); wBase.style.transform = wOv.style.transform = `scale(${s})`; });
+
+  // --- fixed furniture: title block, legend, stat box (as frame M) ---
+  const T = CW.title(S.title, stage);
+  const lg = CW.legend(S.legend, stage, { at: .7 });
+  if (lg && S.strap_clear) {   // strap zone must stay clear: legend moves under the title block
+    lg.style.bottom = "auto"; lg.style.top = ((T ? T.getBoundingClientRect().bottom : 130) + 26) + "px";
+  }
+  CW.statBox(S.stat, stage);
+});
+</script></body></html>

@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Carver card: stat</title>
+<link rel="stylesheet" href="../../brand-kit/src/brand.css"><link rel="stylesheet" href="card.css"><script src="card.js"></script>
+</head><body><div class="stage" id="stage"></div>
+<script>
+// stat card: one big number counting up + unit, label, context line, optional comparison bars growing in sequence.
+CW.boot(async (S, stage) => {
+  const { el, esc, rich, tween, enter, wipe, E, lerp } = CW;
+  if (S.bg_image) await CW.loadImg(S.bg_image);
+  CW.background(S, stage);
+  const at = S.at ?? .35;
+  const sc = el("div", "sc", null, stage);
+  if (S.kicker) wipe(el("span", "kchip zc", esc(S.kicker), sc), .1);
+  const num = el("div", "num zc", `${S.prefix ? `<span class="pre">${esc(S.prefix)}</span>` : ""}<span class="v"></span>${S.unit ? `<span class="u">${esc(S.unit)}</span>` : ""}`, sc);
+  const lab = S.label ? el("div", "lab zc", rich(S.label), sc) : null;
+  const ctx = S.context ? el("div", "ctx zc", rich(S.context), sc) : null;
+  const B = S.bars;
+  let rows = [];
+  if (B && B.items && B.items.length) {
+    const bars = el("div", "bars", null, sc);
+    if (B.title) enter(el("div", "bh zc", esc(B.title), bars), B.at ?? (at + 1.2), { y: 10 });
+    rows = B.items.map(it => {
+      const r = el("div", "brow zc" + (it.highlight ? " hi" : ""), `<div class="bl"><b>${esc(it.label)}</b>${it.sub ? `<i>${esc(it.sub)}</i>` : ""}</div>
+        <div class="track"><div class="bar"></div><div class="bv"><span class="n"></span>${(it.unit ?? B.unit) ? `<small>${esc(it.unit ?? B.unit)}</small>` : ""}</div></div>`, bars);
+      return [r, it];
+    });
+  }
+  num.querySelector(".v").textContent = CW.fmt(Number(S.value), S.decimals ?? CW.decimalsOf(S.value));   // lay out with the final text
+  CW.fit(sc, CW.limit(S));
+  // big number: count-up (the one place digits animate)
+  CW.countUp(num.querySelector(".v"), S.value, at + .1, { decimals: S.decimals, dur: S.count_dur ?? 1.4 });
+  enter(num, at, { y: 26, dur: .6 });
+  if (lab) enter(lab, at + .2, { y: 16 });
+  if (ctx) enter(ctx, at + .3, { y: 14 });
+  // comparison bars
+  if (rows.length) {
+    const max = B.max ?? Math.max(...B.items.map(i => Number(i.value))) * 1.08;
+    const b0 = B.at ?? (at + 1.2), stag = B.stagger ?? .45;
+    rows.forEach(([r, it], i) => {
+      const t0 = it.at ?? (b0 + .15 + stag * i);
+      const track = r.querySelector(".track"), bar = r.querySelector(".bar"), bv = r.querySelector(".bv"), n = bv.querySelector(".n");
+      const dec = it.decimals ?? B.decimals ?? CW.decimalsOf(it.value);
+      n.textContent = CW.fmt(Number(it.value), dec);
+      const wmax = track.getBoundingClientRect().width - bv.getBoundingClientRect().width - 40;
+      const wpx = Math.max(6, Number(it.value) / max * wmax);
+      enter(r.querySelector(".bl"), t0, { x: -16, y: 0, dur: .45 });
+      tween(t0, .8, q => { bar.style.width = (wpx * q).toFixed(1) + "px"; n.textContent = CW.fmt(Number(it.value) * q, dec); bv.style.opacity = Math.min(1, q * 3); });
+      bar.style.width = "0px";
+    });
+  }
+});
+</script></body></html>

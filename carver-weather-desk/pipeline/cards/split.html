@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Carver card: split</title>
+<link rel="stylesheet" href="../../brand-kit/src/brand.css"><link rel="stylesheet" href="card.css"><script src="card.js"></script>
+</head><body><div class="stage" id="stage"></div>
+<script>
+// split card: WHAT'S CERTAIN (check) | WHAT ISN'T (question), items revealing at their `at`.
+CW.boot(async (S, stage) => {
+  const { el, esc, rich, color, enter, wipe } = CW;
+  if (S.bg_image) await CW.loadImg(S.bg_image);
+  CW.background(S, stage);
+  const T = CW.title(S.title, stage);
+  const ICON = {
+    check: '<svg viewBox="0 0 24 24"><path d="M4.5 12.5l4.8 4.8L19.5 7" fill="none" stroke="#050C1A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    question: '<svg viewBox="0 0 24 24"><path d="M8.6 9.1a3.5 3.5 0 1 1 5.3 3c-1.3.8-1.9 1.5-1.9 2.9" fill="none" stroke="#050C1A" stroke-width="3.2" stroke-linecap="round"/><circle cx="12" cy="19.2" r="1.9" fill="#050C1A"/></svg>' };
+  const top = Math.max(500, (T ? T.getBoundingClientRect().bottom : 130) + 70);
+  const wrap = el("div", "split", null, stage); wrap.style.top = top + "px";
+  const divider = el("div", "divider", null, wrap);
+  const cols = [["left", S.left || {}, "WHAT'S CERTAIN", "check", "sky"], ["right", S.right || {}, "WHAT ISN'T", "question", "amber"]].map(([side, C, head, icon, col], ci) => {
+    const c = color(C.color, col);
+    const box = el("div", "scol", null, wrap); box.style.setProperty("--c", c);
+    const sh = el("div", "sh zc", `<span class="ic">${ICON[C.icon || icon]}</span><b>${esc(C.head || head)}</b>`, box);
+    const its = (C.items || []).map(it => typeof it === "string" ? { text: it } : it).map(it => [el("div", "sitem zc", rich(it.text), box), it]);
+    return { sh, its, at: C.at ?? (.45 + .15 * ci) };
+  });
+  CW.fit(wrap, CW.limit(S));
+  CW.tween(.4, .8, q => divider.style.clipPath = `inset(0 0 ${(1 - q) * 100}% 0)`, CW.E.inout);
+  cols.forEach(({ sh, its, at }, ci) => {
+    enter(sh, at, { y: 16 });
+    its.forEach(([n, it], i) => enter(n, it.at ?? (at + .25 + .12 * i), { x: -18, y: 0, dur: .5 }));
+  });
+});
+</script></body></html>

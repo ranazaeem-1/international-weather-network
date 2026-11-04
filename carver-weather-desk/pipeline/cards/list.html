@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Carver card: list</title>
+<link rel="stylesheet" href="../../brand-kit/src/brand.css"><link rel="stylesheet" href="card.css"><script src="card.js"></script>
+</head><body><div class="stage" id="stage"></div>
+<script>
+// list card: numbered "WHAT TO DO" items; each reveals at its `at`, earlier items dim slightly.
+CW.boot(async (S, stage) => {
+  const { el, rich, tween, loop, E, lerp, clamp, mix } = CW;
+  if (S.bg_image) await CW.loadImg(S.bg_image);
+  CW.background(S, stage);
+  const T = CW.title(S.title || { kicker: "WHAT TO DO" }, stage);
+  const items = (S.items || []).map(it => typeof it === "string" ? { text: it } : it);
+  const lst = el("div", "lst", null, stage);
+  lst.style.top = ((T ? T.getBoundingClientRect().bottom : 130) + 44) + "px";
+  const rows = items.map((it, i) => el("div", "litem zc", `<div class="n">${i + 1}</div><div class="tx">${rich(it.text)}</div>`, lst));
+  CW.fit(lst, CW.limit(S));
+  const ats = items.map((it, i) => it.at ?? (.7 + .12 * i));
+  const dim = S.dim ?? .45;
+  rows.forEach((r, i) => {
+    const n = r.querySelector(".n");
+    tween(ats[i], .55, () => {}, E.out);   // registers the entrance end time for the still/zone check
+    loop(t => {
+      const p = E.out(clamp((t - ats[i]) / .55));
+      const later = ats.slice(i + 1).filter(a => a > ats[i]);
+      const dp = later.length ? E.out(clamp((t - Math.min(...later)) / .45)) : 0;
+      r.style.opacity = (p * (1 - dim * dp)).toFixed(3);
+      r.style.transform = `translateX(${(-28 * (1 - p)).toFixed(2)}px)`;
+      n.style.background = mix("crimson", "navy2", dp);
+    });
+  });
+});
+</script></body></html>

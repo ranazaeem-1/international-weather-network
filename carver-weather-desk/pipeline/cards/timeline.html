@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Carver card: timeline</title>
+<link rel="stylesheet" href="../../brand-kit/src/brand.css"><link rel="stylesheet" href="card.css"><script src="card.js"></script>
+</head><body><div class="stage" id="stage"></div>
+<script>
+// timeline card: day/time windows as chips (threat label + severity colour) revealed in sequence on a rail.
+CW.boot(async (S, stage) => {
+  const { el, esc, rich, color, tween, enter, E, lerp } = CW;
+  if (S.bg_image) await CW.loadImg(S.bg_image);
+  CW.background(S, stage);
+  const T = CW.title(S.title, stage);
+  const W = S.windows || [];
+  const top = Math.max(540, T ? T.getBoundingClientRect().bottom + 90 : 540);
+  const rail = el("div", "trail", null, stage); rail.style.top = (top - 44) + "px";
+  const band = el("div", "tband", null, stage); band.style.top = top + "px";
+  const chips = W.map(w => {
+    const c = color(w.color || w.level || w.kind, "sky");
+    const ch = el("div", "tchip zc", `<div class="day">${esc(w.day)}</div>${w.date ? `<div class="date">${esc(w.date)}</div>` : ""}
+      ${w.time ? `<div class="time">${esc(w.time)}</div>` : ""}${w.threat ? `<div class="threat">${esc(w.threat)}</div>` : ""}
+      ${w.detail ? `<div class="detail">${rich(w.detail)}</div>` : ""}${w.confidence ? `<div class="conf">CONFIDENCE <b>${esc(String(w.confidence).toUpperCase())}</b></div>` : ""}`, band);
+    ch.style.setProperty("--c", c); ch.style.setProperty("--tc", CW.darkText(c) ? CW.PAL.ink : "#fff");
+    return ch;
+  });
+  CW.fit(band, CW.limit(S));
+  tween(.35, .9, q => rail.style.clipPath = `inset(-12px ${(1 - q) * 100}% -12px 0)`, E.inout);
+  chips.forEach((ch, i) => {
+    const at = W[i].at ?? (.6 + .12 * i);
+    const r = ch.getBoundingClientRect();
+    const node = el("div", "tnode", null, stage);
+    node.style.left = (r.left + r.width / 2) + "px"; node.style.top = (top - 42) + "px"; node.style.setProperty("--c", ch.style.getPropertyValue("--c"));
+    tween(at, .4, q => { node.style.opacity = q; node.style.transform = `scale(${lerp(.3, 1, q)})`; });
+    enter(ch, at, { y: 26, dur: .6 });
+  });
+});
+</script></body></html>

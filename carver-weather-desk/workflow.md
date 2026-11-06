@@ -26,10 +26,23 @@ The channel is **Carver Weather Desk** (@CarverWeatherDesk). The host is **Glenn
    - every viral clip checked for an older original
    - topic-sheet numbers verified; they are usually wrong
    Output: `research/facts.csv` (an ID, source and time for every number) and `research/sources.csv`.
+   - **Viewer reports, from episode 2 on.** These feed the inbox-callback beat (`docs/script-guide.md` §6).
+     - Pull the comments of the previous Carver upload: `yt-dlp --write-comments --skip-download <url>`.
+     - Pick at most one real report that fits this story: a handle, a town and what they saw.
+     - Save it in `research/viewer_reports.md`. Never invent or embellish one.
 3. **Script.** Follow `docs/script-guide.md` exactly. That covers the 12-section, 12:00-max structure, Glenn's voice, the TTS rules and the two open loops. Allow at most 2 full-host moments, none before 2:30; the sign-off runs over the end screen.
    - Write `script/script.md`, the master. Each section has `layout`, `strap`, `ticker`, `visual`, `facts`, `cue` and `spoken`.
    - Run `python pipeline/script_tools.py build <ep>`. It writes the ONE script, `heygen_paste.txt`, plus `sections.json`, and fails if the estimated video runs over 12:00.
    - Add new hard names to `docs/pronunciation-glossary.csv`. The owner enters them in HeyGen's Brand Glossary.
+   - **CTA beats** (owner, 6 Nov: "more subs and engagement, but not typical"). Follow guide §6:
+     - desk report (S02)
+     - inbox callback (S04, when one fits)
+     - pinned list (S06)
+     - share to one person (S08)
+     - subscribe for the answer (S10)
+     - question of the day + watch next (S12)
+
+     Each has its `cta:` kind and `cta_copy` card. A pinned beat needs `pinned_comment:`, which the build writes to `script/pinned_comment.txt`. The lint checks the beat plan and the spacing.
    - Give the owner the one script, both as the file and pasted in the reply.
 4. **While the owner renders HeyGen:**
    - Build the footage library and trim clips.
@@ -54,16 +67,50 @@ The channel is **Carver Weather Desk** (@CarverWeatherDesk). The host is **Glenn
    - no source credits on screen (owner's choice)
    - no Thai or other placeholder footage left in
    Then make a contact sheet per shot.
-8. **Delivery.** Put the MP4 and the CapCut draft in `delivery/`. The upload copy format follows once titles are decided.
+8. **Delivery.** Put the MP4 and the CapCut draft in `delivery/`, plus `pinned_comment.txt` when the script has a pinned beat. The owner pins that comment right after upload, because the script tells viewers it's there. The upload copy format follows once titles are decided.
 
 ## Screen layout rules (brand kit: `brand-kit/`)
 
-- **Host frame.** Owner's pick (4 Nov 2026): **A, Desk Window**, the rectangle at x 1160, y 40, **720×405**, with **no labels**.
+- **Host frame.** Owner's pick (4 Nov 2026): **A, Desk Window**, a rectangle with **no labels**.
   - The owner's edit: no "WEATHER DESK" tag and no "GLENN CARVER | REPORTING" chip.
-  - The crop is **wide**, so Glenn shows from head to chest with the studio wall behind him, not just his head.
   - The circle (C) is rejected, and B is not used. **Not full-screen at the start**, and full-screen rarely: at most 3 moments per episode, each ≤ 30 s (guide §3). The closing full-host sign-off becomes the **end screen**.
+- **The window comes and goes, and changes look** (owner, 6 Nov 2026). It is not on screen all the time: on for a while, off, on again. All of this is in `pipeline/host_box.py`, and `plan_edit.py` schedules it automatically.
+  - The looks:
+    - **main**: 640×360, head to upper chest (crop 4.6× face width). It is the most common look, about 40%.
+      - It was 720×405 with a head-to-waist crop until 6 Nov. The owner then asked for it "a little smaller", and next "a little cropped so his hands don't show when he is talking".
+      - A, B and C then moved one step down each, in both size and crop, so main stays the biggest and widest.
+    - **A**: 608×342, head, collar and tie knot (4.2×).
+    - **B**: 576×324, head and shoulders (3.8×).
+    - **C**: 544×306, head and the top of the shoulders (3.5×).
+    - Every look crops above the hands, and so does the end-screen frame.
+    - Full-host moments still show the whole HeyGen frame.
+  - The positions:
+    - **TR**: top right, 40 px margins. This is the default.
+    - **TL**: top left at y 128, under the bug.
+    - **BR**: bottom right, 28 px above the ticker.
+  - The rhythm:
+    - The video opens on main TR.
+    - Each section opens with the window ON for at least 5 s.
+    - After that it alternates: ON for 10–17 s, OFF for 7–13 s.
+    - No appearance is shorter than 5 s, and no gap shorter than 4 s.
+  - Every card or map lands full-frame first: the window is OFF for the card's first 5 s. Over a card the window only appears TR, because cards keep that corner clear. TL and BR are used over footage only.
+  - CTAs sit under main TR, so the window is ON as main TR for every CTA.
+  - The window never switches during the intro sting or within 0.8 s of a layout wipe.
+  - **Transitions** (owner, 6 Nov: "I like the animation, add other animations too"). Each appearance gets one transition, used for both its on and its off. They rotate in a fixed order (`host_box.FX` / `FX_SEQ`):
+    - **panel** is the original skewed sweep, about 30% of transitions.
+    - **radar**: a radar-scope disc with a rotating beam, plus a ping sound.
+    - **doors**: navy doors with crimson edges and an emblem flash.
+    - **blinds**: six slats.
+    - **slide**: the window slides in from the nearest screen edge.
+    - **rise**: the window fades in while rising, plus a tick sound.
+  - How they render:
+    - Panel, radar, doors and blinds are 0.6 s alpha overlays, one per window size (`brand-kit/motion/box_<fx>_<look>.mov`). Each fully covers the window from 0.25 to 0.35 s.
+    - Slide and rise are position and opacity keyframes on the host item and its chrome item. `compose.py` renders them with `kf_x`, `kf_y`, `alpha_in` and `alpha_out`; `build_capcut.py` writes CapCut keyframes.
+  - Preview reel of all six: `brand-kit/styleframes/host-box-2026-11-06/CWD_window-transitions-preview.mp4`.
+  - `plan_report.txt` lists every appearance under "desk window".
 - **Keep-clear zones.**
-  - The host's corner is reserved: x ≥ 1130, y ≤ 475. CTA cards sit just under the window, at y 467.
+  - The host's corner is reserved: x ≥ 1130, y ≤ 475. Every look at TR fits inside it.
+  - CTA cards sit 22 px under main TR, at the same left edge and width: x 1240, y 422, 640 wide (`host_box.cta_rect`).
   - The bottom 66 px is the ticker, with the strap and legend just above it.
   - Map cards keep their key places out of those zones.
 - **Headline strap.** One line, ≤ 40 characters. The subline carries the numbers. The kicker is `WEATHER ALERT | DEVELOPING | FORECAST | AFTERMATH` plus the location.
@@ -78,7 +125,7 @@ All commands run from `carver-weather-desk/pipeline/`, with `<ep>` = `../episode
 |---|---|---|
 | 1 | `python script_tools.py build <ep>` (lint; fails if the estimated video is over 12:00; `--demo` relaxes the template checks) | `script/heygen_paste.txt` (ONE script for HeyGen), `sections.json` |
 | 2 | The owner renders HeyGen. Save it as `host/glenn_raw.mp4` | |
-| 3 | `python prep_host.py <ep>` | `host/host_full.mp4`, `host_box.mp4` (536×302 face-placed crop), `host_end.mp4`, `vo.wav` (-16 LUFS), `host_meta.json` |
+| 3 | `python prep_host.py <ep>` | `host/host_full.mp4`, `host_box.mp4` (main 720×405) + `host_box_A/B/C.mp4` (face-placed crops per window look), `host_end.mp4`, `vo.wav` (-16 LUFS), `host_meta.json` |
 | 4 | `python align_host.py <ep>` (faster-whisper word times + script matching, expect > 90% matched) | `edit/align.json`: section starts and every `@ "anchor"` time |
 | 5 | Write card specs `graphics/cards/<id>.json` (format: `docs/cards.md`). Use `"at_words": "<spoken words>"` and the planner turns each into a time | |
 | 6 | `python plan_edit.py <ep> --render` | `edit/timeline.json`, plus rendered cards, straps, chips, CTAs, supers, ticker and base shots; `edit/plan_report.txt` lists shots and warnings |
@@ -86,10 +133,11 @@ All commands run from `carver-weather-desk/pipeline/`, with `<ep>` = `../episode
 | 8 | `python build_capcut.py <ep>` (`--name …_v2` if the draft is open in CapCut) | CapCut draft `<name>` in the CapCut drafts folder |
 
 **Brand motion kit** (re-render only after design changes): `python make_brand_motion.py`. It produces:
-- `brand-kit/motion/`: the wipes, the 4.2 s sting, and the end-screen background and foreground
-- `brand-kit/graphics/`: the bug, the box chrome and the end plate
+- `brand-kit/motion/`: the wipes (one box wipe per window look), the 4.2 s sting, and the end-screen background and foreground
+- `brand-kit/graphics/`: the bug, the window chrome (one per look) and the end plate
 - `brand-kit/sfx/`
 - `--preview` gives stills instead
+- `--box` re-renders only the window chrome and wipes, after a change to `host_box.PRESETS`
 
 **Demo (pipeline test, fictional, never upload):** `episodes/0000-00-00-pipeline-demo`. The footage is the Phuket flood clips as placeholders, and the voice is an edge-tts stand-in for HeyGen (`prep_host.py --standin`).
 

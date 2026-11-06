@@ -4,9 +4,12 @@
   python plan_edit.py <episode_dir> --render   plan + render what the timeline needs (overlays, ticker, cards, base shots)
   --name CWD_slug_v2                             export / CapCut draft name (default CWD_<slug>_v1)
 
-Layout model (owner, 4 Nov 2026): Glenn sits in the Desk Window (top right) over footage/maps/cards; full-screen only where
+Layout model (owner, 4 Nov 2026): Glenn sits in the Desk Window over footage/maps/cards; full-screen only where
 the script says full-host (rare); the closing full-host becomes the end screen (Glenn in a large frame + 2 video slots +
 subscribe slot, >= 20 s). Ticker + bug run until the end screen; the intro sting plays on the name line.
+Desk Window (owner, 6 Nov 2026): not on screen all the time. Inside box sections it comes and goes (on a while, off, on
+again) and each appearance can be another size/place: main 720x405 top right most often, A/B/C smaller, top left or
+bottom right sometimes. host_box.schedule() plans it; every switch is a box wipe.
 Breaks (natsound_after) hide and pause Glenn at a section end while the footage plays with full sound.
 """
 import json, re, subprocess, sys
@@ -14,12 +17,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from align_host import norm_words
+import host_box as HB
 
 CWD = Path(__file__).resolve().parents[1]
-BOX = [1160, 40, 720, 405]          # Desk Window (owner 4 Nov: bigger, wider framing, no labels)
+BOX = HB.rect("main", "TR")         # main Desk Window, top right (sizes: host_box.PRESETS; owner 6 Nov: 640x360)
+CTA_XYW, CTA_CLIP = HB.cta_rect()   # CTA card sits right under main TR, same width
+BOX_SFX_VOL = 0.35                  # window on/off whoosh, quieter than layout wipes (it happens often)
 NAME_CHIP = False                   # owner 4 Nov: no 'GLENN CARVER | REPORTING' chip
 END_HOST = [80, 250, 896, 504]
-STRAP_CLIP = [40, 720, 1360, 294]; CHIP_CLIP = [1310, 300, 600, 90]; CTA_CLIP = [1120, 440, 800, 260]; SUPER_CLIP = [60, 830, 1100, 170]
+STRAP_CLIP = [40, 720, 1360, 294]; CHIP_CLIP = [1310, 300, 600, 90]; SUPER_CLIP = [60, 830, 1100, 170]
 TICKER = [0, 1014, 1920, 66]
 OVL = "brand-kit/src/overlays.html"
 BK = (CWD / "brand-kit").as_posix()          # brand assets are absolute in the timeline (episode-relative paths are not)
@@ -90,10 +96,10 @@ class Plan:
             pts = [t0] + [c[0] for c in cuts] + [t1]; kinds = [cur] + [c[1] for c in cuts]
             for k, kind in enumerate(kinds):
                 segs.append({"kind": kind, "h0": pts[k], "h1": pts[k + 1], "sec": sid})
-        # end screen: starts on the closing subscribe line (the end screen carries the subscribe slot) or the closing
+        # end screen: starts on the closing subscribe or endscreen (watch-next) line (the end screen carries the subscribe slot) or the closing
         # full-host sign-off, whichever comes first; else the last ~15 s of the voice. Never longer than 25 s of speech.
         vo_end = self.A["vo_end"]; lsid = self.ids[-1]; lsec = self.secs[-1]
-        cands = [self.anchor(lsid, c["at"]) for c in lsec.get("cta", []) if c["kind"] == "subscribe" and c.get("at")]
+        cands = [self.anchor(lsid, c["at"]) for c in lsec.get("cta", []) if c["kind"] in ("subscribe", "endscreen") and c.get("at")]
         cands = [c for c in cands if c is not None]
         if segs[-1]["kind"] == "full-host":
             cands.append(segs[-1]["h0"])
@@ -233,11 +239,47 @@ class Plan:
                 nxt = min([m for m, _ in marks if m > at] + [t1]); t = q(add_shot(cid, t, min(nxt, t + 6.5), sec=sg["sec"]))
             fill(t, t1, pool, sg["sec"])
 
+        # ---------- Desk Window schedule (owner 6 Nov: on/off rhythm, varied size + position) ----------
+        box_runs = []
+        for sg in osegs:
+            if sg["kind"].startswith("box"):
+                if box_runs and abs(box_runs[-1][1] - sg["t0"]) < 1e-3:
+                    box_runs[-1][1] = sg["t1"]
+                else:
+                    box_runs.append([sg["t0"], sg["t1"]])
+        name_sec = next((s["id"] for s in self.secs if "glenn carver" in s["spoken"].lower()), None)
+        sting_at = max(0.0, q(out(self.A["sections"][name_sec]["start"], True) - STING_LEAD)) if name_sec else None
+        cta_plan = self.plan_ctas(box_runs, es, out)
+        host_mode = lambda k: "box" if k.startswith("box") else k
+        starts, seen = [], set()
+        for sg in osegs:
+            if sg["kind"].startswith("box") and sg["sec"] not in seen:
+                starts.append(sg["t0"])
+            seen.add(sg["sec"])
+        busy = [(b["t0"] - 0.4, b["t0"] + 0.4) for a, b in zip(osegs, osegs[1:]) if host_mode(a["kind"]) != host_mode(b["kind"])]
+        if sting_at is not None:
+            busy.append((sting_at, sting_at + STING_DUR))
+        cards = [(it["start"], it["start"] + it["dur"]) for it in tracks["base"] if it.get("label", "").startswith("card")]
+        forced = [(t - 0.8, t + d + 0.4) for t, d, _, _ in cta_plan]
+        win_pieces = HB.schedule(box_runs, fps, starts, forced, busy, cards)
+        brk_in = [sg["t0"] for sg in osegs if sg["kind"] == "break"]; brk_out = [sg["t1"] for sg in osegs if sg["kind"] == "break"]
+        for p in win_pieces:
+            # a transition plays where the window itself switches: inside a box run, or at a nat-sound break edge
+            # (run edges at full-host / end screen / the cold open are covered by the full-frame wipe or need none)
+            p["do_in"] = not p["run_start"] or any(abs(p["t0"] - e) < 1e-3 for e in brk_out)
+            p["do_out"] = not p["run_end"] or any(abs(p["t1"] - e) < 1e-3 for e in brk_in)
+            p["keys"] = HB.move_keys(p["fx"], p["preset"], p["pos"], round(p["t1"] - p["t0"], 4), p["do_in"], p["do_out"])                 if HB.FX[p["fx"]]["type"] == "move" else {}
+            sg = next(s for s in osegs if s["kind"].startswith("box") and s["t0"] - 1e-3 <= p["t0"] < s["t1"])
+            x, y, w, h = HB.rect(p["preset"], p["pos"])
+            tracks["host_box"].append({"src": HB.host_src(p["preset"]), "start": p["t0"], "dur": round(p["t1"] - p["t0"], 4),
+                                       "in": round(sg["h0"] + p["t0"] - sg["t0"], 4), "x": x, "y": y, "w": w, "h": h,
+                                       "label": f"window {p['preset']} {p['pos']} {p['fx']}", **p["keys"]})
+
         # ---------- host + voice ----------
         for sg in osegs:
             d = round(sg["t1"] - sg["t0"], 4)
             if sg["kind"].startswith("box"):
-                tracks["host_box"].append({"src": "host/host_box.mp4", "start": sg["t0"], "dur": d, "in": round(sg["h0"], 4), "x": BOX[0], "y": BOX[1], "w": BOX[2], "h": BOX[3]})
+                continue                                         # the Desk Window schedule placed these
             elif sg["kind"] == "full-host":
                 tracks["host_full"].append({"src": "host/host_full.mp4", "start": sg["t0"], "dur": d, "in": round(sg["h0"], 4)})
             elif sg["kind"] == "endscreen":
@@ -255,15 +297,10 @@ class Plan:
                 tracks["vo"].append({"src": "host/vo.wav", "start": q(out(a, True)), "dur": round(b - a, 4), "in": round(a, 4), "volume": 1.0})
 
         # ---------- chrome, bug, ticker ----------
-        box_runs = []
-        for sg in osegs:
-            if sg["kind"].startswith("box"):
-                if box_runs and abs(box_runs[-1][1] - sg["t0"]) < 1e-3:
-                    box_runs[-1][1] = sg["t1"]
-                else:
-                    box_runs.append([sg["t0"], sg["t1"]])
-        for a, b in box_runs:
-            tracks["chrome"].append({"src": f"{BK}/graphics/box_chrome.png", "start": a, "dur": round(b - a, 4)})
+        for p in win_pieces:
+            cx, cy, cw, ch = HB.chrome_rect(p["preset"], p["pos"])
+            tracks["chrome"].append({"src": f"{CWD.as_posix()}/{HB.chrome_src(p['preset'])}", "start": p["t0"], "dur": round(p["t1"] - p["t0"], 4),
+                                     "x": cx, "y": cy, "w": cw, "h": ch, **p["keys"]})
         tracks["chrome"].append({"src": f"{BK}/motion/end_fg.mov", "start": es["t0"], "dur": round(min(30, es["t1"] - es["t0"]), 4), "in": 0.0})
         tracks["bug"].append({"src": f"{BK}/graphics/bug.png", "start": 0.0, "dur": es["t0"]})
         tracks["ticker_top"].append({"src": "graphics/ticker_top.png", "start": 0.0, "dur": es["t0"]})
@@ -273,29 +310,37 @@ class Plan:
         jobs["ticker_span"] = [0.0, es["t0"]]
 
         # ---------- wipes + sting ----------
-        def wipe(src, at, d, sfx, rect=None):
+        def wipe(src, at, d, sfx, rect=None, vol=SFX_VOL):
             it = {"src": src, "start": q(at), "dur": d, "in": 0.0}
             if rect:
                 it.update(x=rect[0], y=rect[1], w=rect[2], h=rect[3])
             if any(not (it["start"] + d <= w["start"] or it["start"] >= w["start"] + w["dur"]) for w in tracks["wipes"]):
                 return False
             tracks["wipes"].append(it)
-            tracks["sfx"].append({"src": f"{BK}/sfx/{sfx}.wav", "start": q(at), "dur": round(min(d, ffdur(CWD / f'brand-kit/sfx/{sfx}.wav')), 4), "in": 0.0, "volume": SFX_VOL})
+            tracks["sfx"].append({"src": f"{BK}/sfx/{sfx}.wav", "start": q(at), "dur": round(min(d, ffdur(CWD / f'brand-kit/sfx/{sfx}.wav')), 4), "in": 0.0, "volume": vol})
             return True
-        name_sec = next((s["id"] for s in self.secs if "glenn carver" in s["spoken"].lower()), None)
-        sting_at = None
-        if name_sec:
-            sting_at = max(0.0, q(out(self.A["sections"][name_sec]["start"], True) - STING_LEAD))
+        if sting_at is not None:
             wipe(f"{BK}/motion/sting.mov", sting_at, STING_DUR, "sting")
-        host_mode = lambda k: "box" if k.startswith("box") else k
         for a, b in zip(osegs, osegs[1:]):
             ma, mb = host_mode(a["kind"]), host_mode(b["kind"]); t = b["t0"]
-            if ma == mb:
-                continue
-            if {ma, mb} == {"box", "break"}:                   # only the desk window changes: wipe just the window
-                wipe(f"{BK}/motion/wipe_box.mov", t - BOXWIPE_SWITCH, 0.6, "whoosh_small", BOX)
-            else:
+            if ma != mb and {ma, mb} != {"box", "break"}:          # box <-> break: the window's own transition (below)
                 wipe(f"{BK}/motion/wipe_full.mov", t - WIPE_SWITCH, 0.8, "whoosh")
+
+        def add_sfx(name, at, vol):
+            at = q(at); d = round(ffdur(CWD / f"brand-kit/sfx/{name}.wav"), 4)
+            if not any(not (at + d <= s["start"] or at >= s["start"] + s["dur"]) for s in tracks["sfx"]):
+                tracks["sfx"].append({"src": f"{BK}/sfx/{name}.wav", "start": at, "dur": d, "in": 0.0, "volume": vol})
+        for p in win_pieces:                                       # the window's transitions (host_box.FX, rotating)
+            spec, r = HB.FX[p["fx"]], HB.rect(p["preset"], p["pos"])
+            for t, do, way in ((p["t0"], p["do_in"], "in"), (p["t1"], p["do_out"], "out")):
+                if not do:
+                    continue
+                if spec["type"] == "cover":
+                    if not wipe(f"{CWD.as_posix()}/{HB.wipe_src(p['preset'], p['fx'])}", t - BOXWIPE_SWITCH, 0.6, spec["sfx"], r, vol=BOX_SFX_VOL):
+                        self.warn.append(f"window switch at {t:.2f}s has no {p['fx']} cover (another wipe is playing): hard cut")
+                else:
+                    lead = 0.0 if way == "in" else (HB.SLIDE_OUT if p["fx"] == "slide" else HB.RISE_OUT)
+                    add_sfx(spec["sfx"], t - lead, BOX_SFX_VOL)
         tracks["wipes"].sort(key=lambda w: w["start"]); tracks["sfx"].sort(key=lambda w: w["start"])
 
         # ---------- name chip, supers, straps, CTAs ----------
@@ -350,18 +395,32 @@ class Plan:
             if not placed:
                 self.warn.append(f"{sid}: no footage stretch >= 6 s for the strap (card/full-host section: its title carries it)")
         copy = self.S.get("cta_copy", {})
-        cands = []
+        for t, d, kind, sid in cta_plan:                         # the window is up as main TR under every CTA (schedule)
+            cc = copy.get(kind, {})
+            gfx("cta", f"cta_{kind}_{sid}", {"kind": "cta", "cta": kind, "head": cc.get("head", ""), "sub": cc.get("sub", ""),
+                                                     "x": CTA_XYW[0], "y": CTA_XYW[1], "w": CTA_XYW[2]}, CTA_CLIP, t, d)
+
+        order = ["base", "host_full", "host_box", "chrome", "straps"] + (["chip"] if NAME_CHIP else []) + ["cta", "supers", "ticker", "ticker_top", "bug", "wipes"]
+        self.tracks, self.osegs, self.jobs, self.T, self.es = tracks, osegs, jobs, T, es
+        self.order, self.pieces = order, win_pieces
+        return self
+
+    def plan_ctas(self, box_runs, es, out):
+        """CTA cards: [(t, dur, kind, sid)] inside box layout and before the end screen (it carries the subscribe slot)."""
+        q = self.q; cands = []
         for s in self.secs:
             for c in s.get("cta", []):
+                if c["kind"] == "endscreen":                     # no card: it only starts the end screen
+                    continue
                 at = self.anchor(s["id"], c["at"]) if c.get("at") else None
                 if at is not None:
                     cands.append((q(out(at, True)), c["kind"], s["id"]))
-        cands.sort()
+        cands.sort(); plan = []
         for k, (t, kind, sid) in enumerate(cands):
             if t >= es["t0"] - 1e-3:
                 if kind != "subscribe":
                     self.warn.append(f"{sid}: CTA {kind} falls in the end screen (skipped)")
-                continue                                         # the end screen carries the subscribe slot
+                continue
             run = next((r for r in box_runs if r[0] - 1e-3 <= t < r[1]), None)
             if not run:
                 self.warn.append(f"{sid}: CTA {kind} falls outside the desk-window layout (skipped)"); continue
@@ -369,13 +428,8 @@ class Plan:
             d = min(8.0, run[1] - t - 0.2, (nxt - t - 0.15) if nxt else 99)
             if d < 4.0:
                 self.warn.append(f"{sid}: CTA {kind} has no room ({d:.1f} s, skipped)"); continue
-            cc = copy.get(kind, {})
-            gfx("cta", f"cta_{kind}_{sid}", {"kind": "cta", "cta": kind, "head": cc.get("head", ""), "sub": cc.get("sub", "")}, CTA_CLIP, t, d)
-
-        order = ["base", "host_full", "host_box", "chrome", "straps"] + (["chip"] if NAME_CHIP else []) + ["cta", "supers", "ticker", "ticker_top", "bug", "wipes"]
-        self.tracks, self.osegs, self.jobs, self.T, self.es = tracks, osegs, jobs, T, es
-        self.order = order
-        return self
+            plan.append((t, d, kind, sid))
+        return plan
 
     @staticmethod
     def merge(ws):
@@ -422,6 +476,9 @@ class Plan:
         lines = [f"timeline {self.T:.2f}s @ {self.fps} fps; end screen {self.es['t0']:.2f}-{self.es['t1']:.2f}"]
         for sg in self.osegs:
             lines.append(f"  {sg['t0']:7.2f}-{sg['t1']:7.2f}  {sg['kind']:<11} {sg['sec']}")
+        lines.append("desk window (on screen):")
+        for p in self.pieces:
+            lines.append(f"  {p['t0']:7.2f}-{p['t1']:7.2f}  {p['preset']:<4} {p['pos']}  {p['fx']:<6}{'  (CTA)' if p['forced'] else ''}")
         lines.append("base:")
         for it in self.tracks["base"]:
             lines.append(f"  {it['start']:7.2f} +{it['dur']:5.2f}  {it.get('label', it['src'])}  vol {it.get('volume', 0)}")

@@ -24,7 +24,8 @@
   if (K === "bug") {
     H(`<div class="bug">${em("white")}<div class="wm"><b>CARVER</b><i>WEATHER DESK</i></div></div>`);
   } else if (K === "chrome") {
-    H(`<div class="chrome"><div class="edge"></div><div class="topbar"></div></div>`);
+    const st = D.w ? ` style="left:${D.x}px;top:${D.y}px;width:${D.w}px;height:${D.h}px"` : "";   // window looks (pipeline/host_box.py)
+    H(`<div class="chrome"${st}><div class="edge"></div><div class="topbar"></div></div>`);
   } else if (K === "chip") {
     H(`<div class="chip"><b>${esc(D.name || "GLENN CARVER")}</b><i>${esc(D.role || "REPORTING")}</i></div>`);
   } else if (K === "super") {
@@ -39,10 +40,16 @@
       subscribe: `<svg viewBox="0 0 54 54"><path d="M27 6c-8 0-13 6-13 14v9l-4 7v2h34v-2l-4-7v-9c0-8-5-14-13-14z" fill="#fff"/><circle cx="27" cy="44" r="5" fill="#fff"/><circle cx="40" cy="12" r="6" fill="#D7192F"/></svg>`,
       share: `<svg viewBox="0 0 54 54"><g class="plane"><path d="M6 26 L48 8 L36 46 L27 32 Z" fill="#fff"/><path d="M27 32 L48 8 L22 29 Z" fill="#5CC8FF"/></g></svg>`,
       comment: `<svg viewBox="0 0 54 54"><path d="M8 10h38a4 4 0 0 1 4 4v20a4 4 0 0 1-4 4H22l-10 8v-8H8a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4z" fill="#fff"/><g class="dots" fill="#0A1B38"><circle cx="17" cy="24" r="3.5"/><circle cx="27" cy="24" r="3.5"/><circle cx="37" cy="24" r="3.5"/></g></svg>`,
+      report: `<svg viewBox="0 0 54 54"><path d="M27 8c-7 0-12 5-12 12 0 9 12 24 12 24s12-15 12-24c0-7-5-12-12-12z" fill="#fff"/><circle cx="27" cy="20" r="4.5" fill="#D7192F"/><g class="waves" fill="none" stroke="#5CC8FF" stroke-width="3" stroke-linecap="round"><path d="M8 14a22 22 0 0 0 0 14"/><path d="M46 14a22 22 0 0 1 0 14"/></g></svg>`,
+      pinned: `<svg viewBox="0 0 54 54"><g class="pin"><path d="M20 6h14l-2 14 8 8v4H14v-4l8-8z" fill="#fff"/><path d="M27 32v16" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="27" cy="12" r="3" fill="#D7192F"/></g></svg>`,
+      question: `<svg viewBox="0 0 54 54"><g class="bars"><rect x="8" y="12" width="34" height="8" rx="2" fill="#fff"/><rect x="8" y="24" width="22" height="8" rx="2" fill="#5CC8FF"/><rect x="8" y="36" width="12" height="8" rx="2" fill="#D7192F"/></g></svg>`,
     }[D.cta] || "";
-    const act = { subscribe: ["SUBSCRIBE", "SUBSCRIBED &#10003;"], share: ["SHARE THIS REPORT", "SENT &#10003;"], comment: ["COMMENT", "WE READ THEM &#10003;"] }[D.cta] || ["", ""];
+    const act = { subscribe: ["SUBSCRIBE", "SUBSCRIBED &#10003;"], share: ["SHARE THIS REPORT", "SENT &#10003;"], comment: ["COMMENT", "WE READ THEM &#10003;"],
+                  report: ["SEND A DESK REPORT", "GLENN READS THEM &#10003;"], pinned: ["PINNED COMMENT", "LINKS INSIDE &#10003;"],
+                  question: ["ONE-WORD ANSWER", "IN THE COMMENTS &#10003;"] }[D.cta] || ["", ""];
     H(`<div class="cta k-${esc(D.cta)}"><div class="ico">${ic}</div><div class="txt"><b>${esc(D.head)}</b><span>${esc(D.sub)}</span></div>` +
       `<div class="act"><span class="a1">${act[0]}</span><span class="a2">${act[1]}</span></div></div>`);
+    if (D.x != null) Object.assign(root.lastElementChild.style, { left: D.x + "px", top: D.y + "px", width: D.w + "px" });   // under main TR (host_box.cta_rect)
   } else if (K === "ticker_top") {
     H(`<div class="ticker top"><div class="badge">${em("white")}CARVER</div><div class="label">${esc(D.label || "THE LATEST")}</div>` +
       `<div class="run"></div><div class="clock">${esc(D.updated ? "UPDATED " + D.updated : "")}</div></div>`);
@@ -55,8 +62,45 @@
   } else if (K === "wipe_box") {
     const w = document.createElement("div"); w.className = "wipe box"; root.appendChild(w);
     const T = D.dur || 0.6, bw = D.w || 720, bh = D.h || 405, sc = bw / 1850;
+    if (D.x != null) Object.assign(w.style, { left: D.x + "px", top: D.y + "px", width: bw + "px", height: bh + "px" });
     const skew = (bh * 1.4 / 2) * Math.tan(14 * Math.PI / 180), cov = -(skew + 200 * sc + 0.08 * bw);
     row(w, sc, 0, T, [[0, bw + skew + 10], [0.42, cov], [0.58, cov], [1, -(2884 * sc) - skew - 10]]);
+  } else if (K === "box_radar" || K === "box_doors" || K === "box_blinds") {
+    // window cover transitions (pipeline/host_box.py FX): the window is fully covered 0.25-0.35 s of 0.6 s
+    const T = D.dur || 0.6, bw = D.w || 640, bh = D.h || 360, ms = T * 1000, o = s => s / T;
+    const w = document.createElement("div"); w.className = "wipe box"; root.appendChild(w);
+    Object.assign(w.style, { left: (D.x ?? 1240) + "px", top: (D.y ?? 40) + "px", width: bw + "px", height: bh + "px" });
+    const el = (css, html = "") => { const e = document.createElement("div"); e.style.cssText = "position:absolute;" + css; e.innerHTML = html; w.appendChild(e); return e; };
+    if (K === "box_radar") {
+      const d = Math.ceil(Math.hypot(bw, bh)) + 8, c = `left:${(bw - d) / 2}px;top:${(bh - d) / 2}px;width:${d}px;height:${d}px;border-radius:50%;`;
+      const disc = el(c + "background:radial-gradient(circle,#0D2250 0%,#0A1B38 55%,#050C1A 100%);overflow:hidden",
+        `<div style="position:absolute;inset:0;background:repeating-radial-gradient(circle,rgba(92,200,255,0) 0 ${d / 12 - 2}px,rgba(92,200,255,.22) ${d / 12 - 2}px ${d / 12}px)"></div>` +
+        `<div class="beam" style="position:absolute;inset:0;background:conic-gradient(from 0deg,rgba(92,200,255,0) 0deg,rgba(92,200,255,0) 300deg,rgba(92,200,255,.55) 358deg,rgba(255,255,255,.9) 360deg)"></div>` +
+        `<div style="position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px;border-radius:50%;background:#fff;box-shadow:0 0 14px #5CC8FF"></div>`);
+      const ring = el(c + "box-shadow:inset 0 0 0 5px #5CC8FF,0 0 24px rgba(92,200,255,.6)");
+      const ease = "cubic-bezier(.6,0,.3,1)";
+      const sk = [{ offset: 0, transform: "scale(0)", easing: ease }, { offset: o(.25), transform: "scale(1)" }, { offset: o(.35), transform: "scale(1)", easing: ease }, { offset: 1, transform: "scale(0)" }];
+      anim(disc, sk, { duration: ms }); anim(ring, sk.map(k => ({ ...k, transform: k.transform.replace(/scale\(([\d.]+)\)/, (m, v) => `scale(${Math.min(1.06, v * 1.06)})`) })), { duration: ms });
+      anim(disc.querySelector(".beam"), [{ transform: "rotate(0deg)" }, { transform: "rotate(540deg)" }], { duration: ms });
+    } else if (K === "box_doors") {
+      const half = bw / 2 + 2, ease = "cubic-bezier(.7,0,.25,1)";
+      const L = el(`left:0;top:0;width:${half}px;height:100%;background:linear-gradient(90deg,#071430,#0D2250);box-shadow:inset -7px 0 0 #D7192F,inset -10px 0 0 #5CC8FF`);
+      const R = el(`right:0;top:0;width:${half}px;height:100%;background:linear-gradient(270deg,#071430,#0D2250);box-shadow:inset 7px 0 0 #D7192F,inset 10px 0 0 #5CC8FF`);
+      const k = s => [{ offset: 0, transform: `translateX(${s}%)`, easing: ease }, { offset: o(.25), transform: "none" }, { offset: o(.35), transform: "none", easing: ease }, { offset: 1, transform: `translateX(${s}%)` }];
+      anim(L, k(-101), { duration: ms }); anim(R, k(101), { duration: ms });
+      const m = Math.round(Math.min(bw, bh) * 0.24), e = el(`left:${(bw - m) / 2}px;top:${(bh - m) / 2}px;width:${m}px;height:${m}px;opacity:0`, em("white"));
+      e.firstChild.style.cssText = "display:block;width:100%;height:100%";
+      anim(e, [{ offset: 0, opacity: 0 }, { offset: o(.22), opacity: 0 }, { offset: o(.27), opacity: 1 }, { offset: o(.33), opacity: 1 }, { offset: o(.38), opacity: 0 }, { offset: 1, opacity: 0 }], { duration: ms });
+    } else {
+      const n = 6, sh = Math.ceil(bh / n) + 1, ease = "cubic-bezier(.65,0,.3,1)";
+      for (let i = 0; i < n; i++) {
+        const s = el(`left:0;top:${i * (bh / n)}px;width:${bw}px;height:${sh}px;background:${i % 2 ? "#0D2250" : "#0A1B38"};box-shadow:inset 6px 0 0 ${i % 2 ? "#5CC8FF" : "#D7192F"}`);
+        const a0 = .02 * i, inEnd = .15 + a0, outStart = .35 + a0;        // every slat covers 0.25-0.35
+        anim(s, [{ offset: 0, transform: `translateX(${bw + 20}px)` }, { offset: o(a0), transform: `translateX(${bw + 20}px)`, easing: ease },
+          { offset: o(inEnd), transform: "none" }, { offset: o(outStart), transform: "none", easing: ease },
+          { offset: Math.min(1, o(outStart + .15)), transform: `translateX(${-bw - 20}px)` }, { offset: 1, transform: `translateX(${-bw - 20}px)` }], { duration: ms });
+      }
+    }
   } else if (K === "sting") {
     const T = D.dur || 4.2; const ms = T * 1000;
     const w = document.createElement("div"); w.className = "wipe full"; root.appendChild(w);

@@ -4,7 +4,8 @@
 /* glass can't blur in an alpha overlay render: use a denser tint instead */
 .strap .main { backdrop-filter: none; background: rgba(8, 22, 48, .86); }
 
-/* ---------- desk window chrome (static PNG, sits above host_box video at 1160,40 720x405; owner 4 Nov: no labels) ---------- */
+/* ---------- desk window chrome (static PNG above the host_box video; owner 4 Nov: no labels). Default = main 720x405 at 1160,40;
+   the window looks (pipeline/host_box.py, owner 6 Nov) pass their own rect inline ---------- */
 .chrome { position: absolute; left: 1160px; top: 40px; width: 720px; height: 405px; }
 .chrome .edge { position: absolute; inset: 0; box-shadow: 0 22px 54px rgba(0,0,0,.55); }
 .chrome .edge::after { content: ""; position: absolute; inset: 0;
@@ -49,7 +50,7 @@
 @keyframes pIn { from { opacity: 0; transform: translateY(8px); } }
 @keyframes sOut { to { opacity: 0; transform: translateX(-40px); } }
 
-/* ---------- CTA cards (under the desk window) ---------- */
+/* ---------- CTA cards (under the desk window; the pipeline passes left/top/width inline from host_box.cta_rect) ---------- */
 .cta { position: absolute; left: 1160px; top: 467px; width: 720px; display: grid; grid-template-columns: 92px 1fr; column-gap: 16px;
   padding: 16px 18px 16px 16px; background: rgba(8,22,48,.9); border-left: 8px solid var(--crimson); box-shadow: 0 18px 40px rgba(0,0,0,.45);
   animation: ctaIn .55s var(--ease) both, ctaOut .4s var(--ease-in) forwards; animation-delay: 0s, calc(var(--dur) - .4s); }
@@ -69,6 +70,13 @@
 .cta.k-comment .ico svg .dots circle { animation: blink 1.2s ease-in-out infinite; }
 .cta.k-comment .ico svg .dots circle:nth-child(2) { animation-delay: .2s; }
 .cta.k-comment .ico svg .dots circle:nth-child(3) { animation-delay: .4s; }
+.cta.k-report .ico svg .waves { animation: blink 1.1s ease-in-out infinite; }                      /* desk report: signal */
+.cta.k-pinned .ico svg .pin { transform-origin: 50% 90%; animation: pinDrop .6s var(--ease) .25s both; }
+.cta.k-question .ico svg .bars rect { transform-origin: 8px 50%; animation: barGrow .7s var(--ease) both; }
+.cta.k-question .ico svg .bars rect:nth-child(2) { animation-delay: .12s; }
+.cta.k-question .ico svg .bars rect:nth-child(3) { animation-delay: .24s; }
+@keyframes pinDrop { 0% { transform: translateY(-14px) rotate(-12deg); opacity: .4; } 70% { transform: translateY(2px) rotate(3deg); opacity: 1; } 100% { transform: none; } }
+@keyframes barGrow { from { transform: scaleX(0); } }
 @keyframes ctaIn { from { opacity: 0; transform: translateX(70px); } }
 @keyframes ctaOut { to { opacity: 0; transform: translateX(70px); } }
 @keyframes aOut { to { opacity: 0; transform: scale(.92); } }
@@ -91,6 +99,7 @@
 .wipe.box { left: 1160px; top: 40px; width: 720px; height: 405px; }
 .row { position: absolute; top: -20%; height: 140%; display: flex; transform: skewX(-14deg); will-change: left; }
 .row > span { height: 100%; flex: none; }
+.wipe .emblem svg { width: 100%; height: 100%; display: block; }      /* doors transition: emblem flash */
 .wm-c { position: absolute; left: 50%; top: 50%; width: 300px; height: 300px; transform: translate(-50%,-50%); opacity: 0; }
 
 /* ---------- sting logo ---------- */

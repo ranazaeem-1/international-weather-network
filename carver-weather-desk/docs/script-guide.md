@@ -148,9 +148,10 @@ Each option has a slot tied to the story's next milestone. That makes it better 
   - "Here's the part…": at most 2 per episode
   - "And it isn't over": at most once
   - "There was no hurricane": once
-- **CTA clichés:**
-  - "smash that like", "hit the bell", "where are you watching from?"
-  - "it really helps the channel", "if this video helped you, subscribe"
+- **CTA clichés** (the lint flags them):
+  - "smash that like", "hit the bell", "ring the bell", "turn on the bell", "where are you watching from?"
+  - "like and subscribe", "don't forget to subscribe", "hit subscribe", "consider subscribing", "drop a like"
+  - "it really helps the channel", "if this video helped you", "if you enjoyed this video", "if you're new here"
 
 ---
 
@@ -166,26 +167,26 @@ Each option has a slot tied to the story's next milestone. That makes it better 
 
 **Layouts:**
 
-- `box+footage`: Glenn in the Desk Window over clips (the default)
+- `box+footage`: Glenn in the Desk Window over clips (the default). Since 6 Nov the window comes and goes, and changes size and position, inside `box*` layouts on its own (`workflow.md` › Screen layout rules). The script never times it.
 - `box+map`: the window over a map or radar loop
 - `box+card`: the window over an animated card or chart
 - `full-host`: Glenn full screen. **At most 2 per episode, each ≤ 30 s.**
-- The sign-off is **not** full-host. The end screen starts on the closing subscribe line, with Glenn in its large frame.
+- The sign-off is **not** full-host. The end screen starts on the closing watch-next line (`cta: endscreen`), with Glenn in its large frame.
 
 | ID | Segment | Time | Words | Layout | What goes in it |
 |---|---|---|---|---|---|
 | S01 | **Cold open** | 0:00–0:38 | 85–105 | box+footage | **Hook formula:** concrete number + place → why it's unusual → one history comparison → scope (2–3 places max) → "In the next few minutes, I'll show you [1], [2], and [3]." → **Open loop A** (a specific, sourced fact paid off in S07): "And there's one [thing] … I'll get to that." |
-| S02 | **Name line + as-of + audience qualifier** | 0:38–0:58 | 45–60 | box+footage | Name line (§2.3), the as-of line, then "If you live anywhere from [A] to [B] … if you have family there, [segment] near the end is the part they need." **No subscribe here.** The intro sting plays on the name line. |
+| S02 | **Name line + as-of + audience qualifier + desk report** | 0:38–0:58 | 45–60 | box+footage | Name line (§2.3), the as-of line, then "If you live anywhere from [A] to [B] … if you have family there, [segment] near the end is the part they need." Last sentence: the **desk-report invite** (§6 beat 1). **No subscribe here.** The intro sting plays on the name line. |
 | S03 | **Worst-hit place first** | 0:58–2:22 | 195–225 | box+footage → box+map | Open on the place, the clock time and the number. One human-scale detail from facts.csv and one spoken visual hand-off ("On this gauge, the red line is flood stage…"). End on a baton. |
-| S04 | **The scale / second place** | 2:22–3:22 | 140–160 | box+footage | Distance + direction + why the place matters. One "number made concrete" line. ★ **Mini-loop ~3:00**, paid within 60 s ("and the number that surprised me most is still coming"). |
+| S04 | **The scale / second place** | 2:22–3:22 | 140–160 | box+footage | Distance + direction + why the place matters. One "number made concrete" line. ★ **Mini-loop ~3:00**, paid within 60 s ("and the number that surprised me most is still coming"). From episode 2 on: the **inbox callback** (§6 beat 2), when a real report from the last video fits the story. |
 | S05 | **Explainer: why it happened** | 3:22–4:46 | 195–225 | **full-host** (first 10–20 s) → box+card | **Full-host moment 1:** Glenn asks the question straight to camera, then the cut to an animated card. Mechanism in 3–4 plain sentences + **one analogy** + one history comparison. Lands at 30–40% of the runtime. ★ Mid-roll ad slot at the S05/S06 boundary. |
-| S06 | **Impacts and the response** | 4:46–6:12 | 200–230 | box+footage | Roads, power, schools, rescues, crews, declarations: one impact per sentence, each with a number and who did what and when. **≤ 3 place names per sentence**; longer lists go on a card or the ticker. **Plant open loop B**: a sourced fact about the next 48 h, paid in S08 or S09. |
+| S06 | **Impacts and the response** | 4:46–6:12 | 200–230 | box+footage | Roads, power, schools, rescues, crews, declarations: one impact per sentence, each with a number and who did what and when. **≤ 3 place names per sentence**; longer lists go on a card or the ticker. **Plant open loop B**: a sourced fact about the next 48 h, paid in S08 or S09. When a list is too long to read (shelters, closures, gauges), point to it with the **pinned-comment beat** (§6 beat 3). |
 | S07 | **Re-anchor + payoff of loop A** | 6:12–7:17 | 150–175 | box+map or box+footage | The first sentence re-anchors: "If you're just joining me: [where], [what], [latest number], as of [time]." Then "Now, the [thing] I told you about at the start." Pay it with a real number, a mechanism and a consequence, by ~60% of the runtime. ★ Mid-roll ad slot after this section. |
-| S08 | **What's next: timeline by impact window** | 7:17–8:43 | 200–230 | box+map → box+card | Group by **window, not city**: "If you're in [area], your window is [day], [time] to [time]." ≤ 3 cities per sentence, with the full city list on the timeline card. Give each window's threat and confidence. **Share CTA** (§6) as the last sentence: the one mid-video CTA. |
+| S08 | **What's next: timeline by impact window** | 7:17–8:43 | 200–230 | box+map → box+card | Group by **window, not city**: "If you're in [area], your window is [day], [time] to [time]." ≤ 3 cities per sentence, with the full city list on the timeline card. Give each window's threat and confidence. **Share-to-one-person beat** (§6 beat 4) as the last sentence. |
 | S09 | **What to do** | 8:43–9:35 | 120–140 | box+card | 4–5 numbered actions, each tied to **this** event's timing or place and with a consequence. Pay loop B here if it wasn't paid in S08. |
-| S10 | **Certain vs. uncertain** | 9:35–10:15 | 90–110 | **full-host** (opening 15–25 s) → box+card | **Full-host moment 2.** "Let me be straight with you about what's certain and what isn't." 2 certain points, 2 uncertain ones, **what would change the picture**, and **when the next official update comes** (office + time). |
+| S10 | **Certain vs. uncertain** | 9:35–10:15 | 90–110 | **full-host** (opening 15–25 s) → box+card | **Full-host moment 2.** "Let me be straight with you about what's certain and what isn't." 2 certain points, 2 uncertain ones, **what would change the picture**, and **when the next official update comes** (office + time). Last sentences: the **subscribe-for-the-answer beat** (§6 beat 5). |
 | S11 | **Bottom line** | 10:15–10:38 | 50–65 | box+footage | One-sentence summary, a callback to the hook number, and the next milestone with day and time. |
-| S12 | **CTA close + sign-off** | 10:38–10:58 | 40–55 | box+footage → **end screen** on the subscribe line | Comment CTA (specific, §6) + subscribe CTA tied to the next milestone + "follow your local National Weather Service office" + sign-off (§2.4). The planner starts the end screen on the subscribe line, and Glenn talks through it. |
+| S12 | **Question of the day + watch next + sign-off** | 10:38–10:58 | 40–55 | box+footage → **end screen** on the watch-next line | **Question of the day** (§6 beat 6) + the **watch-next line** (`cta: endscreen @ "…"`, §6) + "follow your local National Weather Service office" + sign-off (§2.4). The planner starts the end screen on the watch-next line, and Glenn talks through it. |
 
 **Rules for the structure:**
 
@@ -384,10 +385,15 @@ facts: research/facts.csv
 loops:
   A: {planted: S01, paid: S07, fact: F14}
   B: {planted: S06, paid: S09, fact: F22}
-cta_copy:                              # on-screen CTA card copy, one per kind used in cta:
+cta_copy:                              # on-screen CTA card copy, one per kind used in cta: (not endscreen)
+  report:    {head: "IS WATER ON YOUR STREET?", sub: "Send a desk report: your town + what you see"}
+  pinned:    {head: "EVERY ROAD CLOSURE, ONE LIST", sub: "The full county list is in the pinned comment"}
   share:     {head: "KNOW SOMEONE IN SOUTH FLORIDA?", sub: "Send them this before the next high tide"}
-  comment:   {head: "WHAT'S YOUR STREET LOOK LIKE?", sub: "Tell Glenn where you are in the comments"}
-  subscribe: {head: "GET THE NEXT UPDATE", sub: "Glenn is back before Thursday's high tide"}
+  subscribe: {head: "THE ANSWER COMES THURSDAY", sub: "Subscribe, notifications on All, and it finds you"}
+  question:  {head: "DID THE ALERT BEAT THE WATER?", sub: "Yes or no. It tells us if the warnings worked"}
+pinned_comment: |                      # required when a pinned CTA is used; build writes script/pinned_comment.txt
+  Every road closure from tonight's update, by county (as of 6 PM ET Wed):
+  Miami-Dade: ...
 ---
 
 ## [S01] Cold open: the ocean in the streets
@@ -399,7 +405,7 @@ ticker:
 visual: N08 | N13 @ "Collins Avenue" | card:gauge_chart @ "On this gauge"
 facts: F01, F02, F05
 pause: after "major flood line" 0.5s
-cta: share @ "send this"            # optional
+cta: share @ "send this"            # optional; kinds in section 6
 natsound_after: N17 8               # or 0
 spoken: |
   The exact spoken text, indented. Line breaks inside the block are joined into one paragraph.
@@ -427,7 +433,11 @@ A ` # comment` at the end of a field line is ignored (not inside `spoken:`).
   - `card:map_storm` is `graphics/cards/<id>.mp4`. A card not rendered yet is only a warning.
   - `@ "words"` anchors that item's start to the first time those words are spoken in the section. Unanchored items fill the time in order. Anchors must run in list order.
   - Every spoken hand-off ("On this map…") must have a matching anchored card, and the reverse.
-- **`cta:`** optional, `|`-separated: `share @ "words" | subscribe @ "words"`. Kinds are `share | comment | subscribe`. Each kind used needs a `cta_copy` entry. The CTA card appears on the anchor words.
+- **`cta:`** optional, `|`-separated: `share @ "words" | subscribe @ "words"`.
+  - Kinds: `report | pinned | share | subscribe | question | comment | endscreen` (the beats in §6).
+  - Each kind used needs a `cta_copy` entry, except `endscreen`, which has no card and only starts the end screen.
+  - The CTA card appears on the anchor words, under main TR. Anchor on the first words of the ask.
+  - A `pinned` CTA needs `pinned_comment: |` in the front matter.
 - **`natsound_after:`** `<clip ID> <seconds>` (6–12 s), or `0`. It inserts a nat-sound break, with the host hidden and paused, after the section. At most 4 per episode.
 - **`pause:`** `after "words" 0.5s`, several separated by `|` (§4.7). At most 8 per episode.
 - **`cue:`** optional. The build always derives the cue from the first 6 spoken words. If you write `cue:`, it must match.
@@ -460,14 +470,15 @@ python pipeline/script_tools.py build episodes/<episode> --demo     # test scrip
 | Forbidden characters in spoken text: `[0-9[](){}/\&%$#@*_~+=<>\|^"“”…—–;:!]` | Section word counts vs the §3 template ±15% (ranges scale with `target_words`) | Card mp4 not rendered yet |
 | Abbreviations (mph, a.m., St., Hwy…) and ALL-CAPS words not in the glossary (NOAA, FEMA, TV allowed) | Section count ≠ 14 | Banned phrases (§2.5), "Here's the part" > 2 |
 | Sentence > 28 words | Name line outside 0:35–0:55 | Average sentence > 16 words |
-| Total words outside `target_words` ±5% | Any CTA before 2:00 | Nat-sound outside 6–12 s, more than 4 breaks |
+| Total words outside `target_words` ±5% | Any CTA before 2:00 (a `report` CTA: before the name-line window) | Nat-sound outside 6–12 s, more than 4 breaks |
 | Estimated video > 12:00 | Full-host before 2:30 | More than 8 pauses, pause words that occur twice |
 | Cue not unique anywhere in the script, or starting with a number word | | Missing `facts:` (unless `sample: true`) |
 | Any `@`/`after` anchor not in the section's spoken text, or anchors out of order | | Missing name line |
 | Strap: 4 fields, kicker list, headline ≤ 40 uppercase, subline ≤ 90 | | |
 | Full-host in more than 3 sections, or one stretch over 30 s | | |
 | Clip ID with no `clips/lib/<ID>_*.mp4` (or several), nat-sound clip missing | | |
-| Unknown `cta` kind or no `cta_copy` for it, bad field syntax, missing `layout`/`strap`/`spoken` | | |
+| Unknown `cta` kind or no `cta_copy` for it, bad field syntax, missing `layout`/`strap`/`spoken` | CTA plan: a missing report / share / subscribe / (question or comment) beat; the same beat twice (comment: three times) | Two CTA asks less than 75 s apart |
+| More than 6 CTA asks; a `pinned` CTA without `pinned_comment` | | |
 
 ### 5.3 Finding section starts in the HeyGen audio (for alignment)
 
@@ -487,26 +498,71 @@ python pipeline/script_tools.py build episodes/<episode> --demo     # test scrip
 
 ---
 
-## 6. CTA lines (spoken)
+## 6. CTA beats: spoken and on screen (owner, 6 Nov 2026)
 
-**Placement:**
+The owner wants more subscribers and engagement, "but it doesn't need to be typical".
 
-- **One mid-video CTA**, a share CTA as the last sentence of S08, right after the viewer has learned who is in the path. That is the moment sharing is most useful.
-- **Comment + subscribe at S12** (the subscribe line starts the end screen). Nothing before 2:00. Never inside damage, casualty or timeline sentences. Never joined to a plot beat with "because" or "so".
-- **At most 3 CTA sentences plus the sign-off per episode.**
+So the asks are never "please subscribe". Each one is a **beat with a job**:
+- the viewer gets something (an answer, a list, a voice in the next update), or
+- does something useful (warn one person, report what they see).
 
-Fill the [slots] from facts.csv.
+Walt's channel shows what not to do (§1, W5): generic subscribe pleas earn 1 to 26 comments per video.
 
-1. **Comment your town (impact report):** "If water reached your street, tell me your town and street in the comments. I read them, and the next person from [area] will know what to expect at the next high tide."
-2. **Comment a measurement:** "If you have a rain gauge, put your total and your town in the comments. Official gauges can be miles apart, and your number fills the gap."
-3. **Comment a check-in (outages, closures):** "If you're in [area] and your power is still out, tell me the neighborhood and how long it's been. It helps people nearby see who is still waiting."
-4. **Subscribe for the next update (milestone):** "The next [crest / high tide / round of storms] that matters is [day] [time of day]. Subscribe, and my update will be up before it arrives."
-5. **Subscribe for the open question:** "The one thing I can't tell you yet is [uncertainty]. The weather service will know by [time]. Subscribe, and I'll bring you that answer."
-6. **Share with someone in the path (timeline):** "If you know someone in [towns in the window], send them this video before [window start]. The timeline I just walked through is the part they need."
-7. **Share for a night threat:** "If someone you love sleeps through storms, send them this now, and ask them to turn on emergency alerts on their phone tonight."
-8. **Share for travel:** "If someone is driving [route] for [holiday / the weekend], send them the window I just gave you. It could save them hours on a closed road."
+Each beat has a `cta:` kind. The planner shows that kind's card (`cta_copy`) on the anchor words, with Glenn's window up as main TR. Fill every [slot] from `facts.csv` or real viewer comments.
 
-Always close with "And follow your local National Weather Service office and your emergency officials." (Walt does this; keep it.)
+| # | Beat | Where | `cta:` kind | Job |
+|---|---|---|---|---|
+| 1 | **Desk report** | S02, the last sentence | `report` | Earliest engagement, and it makes the viewer a contributor, not an audience |
+| 2 | **Inbox callback** | S04, from episode 2 | none (it isn't an ask) | Proves the comments get read, which is what makes beat 1 work |
+| 3 | **Pinned list** | S06 (or wherever a list is too long to speak) | `pinned` | Turns a list Glenn can't read out into a visit to the comments |
+| 4 | **Share to one person** | S08, the last sentence | `share` | Sharing when it's most useful: right after the timeline |
+| 5 | **Subscribe for the answer** | S10, the last sentences | `subscribe` | Subscribing as the way to get the one thing still unknown |
+| 6 | **Question of the day** | S12, before the watch-next line | `question` (or `comment`) | A one-word answer is easy, and it serves the story |
+| | **Watch next** | S12, starting the end screen | `endscreen` (no card) | Keeps the session going: names the video on the end screen |
+
+**Rules:**
+
+- **At most 6 asks** per episode (`report`, `pinned`, `share`, `subscribe`, `question`, `comment`), **at least 75 s apart**, and never the same beat twice. The exception is `comment`: at most twice, and only as different check-ins.
+- **At most 2 sentences per beat**, about 35 words.
+- No ask inside a damage, casualty, rescue or timeline sentence. Never join an ask to a plot beat with "because" or "so".
+- **Deaths or injuries in the story:** beats 1 and 6 ask for information (a report, a check-in, did the alert arrive), never an opinion or a poll about the disaster. Drop beat 6 if it can't be both useful and respectful.
+- **Subscribe is asked once** (beat 5). The end screen's subscribe button does the rest.
+- **Notifications:** say "notifications on All" only inside beat 5. Never "bell".
+- **Honesty:** promise only what the channel does.
+  - "I read them" means the owner or I really read them, and beat 2 proves it.
+  - "My next update before Thursday" means one is planned.
+  - The pinned comment must exist, written in `pinned_comment:`.
+- **Inbox callbacks quote real comments only**, from the previous Carver upload. Give the first name or handle and the town exactly as the viewer wrote them, and keep it short. If no comment fits the story, skip the beat. Never invent one.
+
+**Lines to adapt** (rewrite them every episode; never paste the same wording twice in a row):
+
+1. **Desk report** (`report`):
+   - "If you're in [area] right now, you're my eyes on the ground. Tell me your town and one thing you're seeing, water, wind or power, and I'll read the best reports in my next update."
+   - "If you've measured the water at your place, put the number and your town in the comments. Official gauges are miles apart, and your report fills the gap."
+2. **Inbox callback** (no card):
+   - "After my last update, [handle] in [town] wrote that [their report in a few words]. That's exactly what the gauge showed an hour later."
+   - "A lot of you in [area] told me [pattern from comments]. Here's why that happened."
+3. **Pinned list** (`pinned`):
+   - "There are [number] closures, and I won't read them all. Every one, by county, is in the pinned comment."
+   - "Your county's shelter and the number to call are in the pinned comment. Find yours now, before you need it."
+4. **Share to one person** (`share`):
+   - "Think of one person in [window towns] who won't see the alert in time. Send them this before [window start]."
+   - "If someone you love sleeps through storms, send them this now, and ask them to turn on emergency alerts tonight."
+   - "If someone is driving [route] this [weekend], send them the window I just gave you. It could save them hours on a closed road."
+5. **Subscribe for the answer** (`subscribe`):
+   - "The one thing I can't tell you yet is [uncertainty]. The weather service will know by [time]. Subscribe, set notifications to All, and you'll have my answer before [event]."
+   - "The next [crest / high tide / round] that matters is [day] [time of day]. Subscribe, and my update will be up before it arrives, not after."
+6. **Question of the day** (`question`):
+   - "One question before I go. Did the alert reach your phone before the water did? Yes or no in the comments. It tells me, and the forecasters, whether the warnings worked."
+   - "Quick one for you: how much rain did you get? Just the number and your town. I'll put the highest totals in my next update."
+   - Use `comment` instead for a check-in: "If your power is still out, tell me the neighborhood and how long it's been. It helps people nearby see who is still waiting."
+- **Watch next** (`endscreen`):
+   - "If you want to see how [similar past event] played out, that's the video on your screen now. It's the closest thing we have to a preview."
+   - "The video on your screen walks through [related topic]. It's the best next ten minutes if you're in [area]."
+
+Always end with "And follow your local National Weather Service office and your emergency officials." (Walt does this; keep it.) Then the sign-off (§2.4).
+
+**On-screen cards** (`cta_copy`): the head is a question or a promise in at most 30 characters. The sub says what to do in at most 50 characters. Cards: `brand-kit/styleframes/cta-2026-11-06/cta_cards.jpg`.
 
 ---
 
@@ -575,7 +631,7 @@ I'm Glenn Carver, and this is the Carver Weather Desk. As of six o'clock Eastern
 - [ ] Every spoken visual hand-off has a `visual:` entry.
 - [ ] What to do: 4–6 numbered steps, each with this event's timing or consequence.
 - [ ] Certain vs. uncertain, with what would change it and the next official update time.
-- [ ] CTAs: share at the end of S08, comment + subscribe at S12, all filled with story slots. No generic CTA.
+- [ ] CTA beats (§6): desk report (S02), inbox callback if there is a real report (S04), pinned list if a list exists (S06), share to one person (S08), subscribe for the answer (S10), question of the day + watch next (S12). Every slot filled from the story; the pinned comment is written; at least 75 s between asks.
 - [ ] At most 3 full-host moments, all ≤ 30 s, none in S01–S04.
 - [ ] Banned phrases (§2.5) absent. "Here's the part…" ≤ 2.
 - [ ] Lint passes (§5.2). Estimated video ≤ 12:00 (the lint checks it). One script. Cues unique. New hard names added to the Brand Glossary.

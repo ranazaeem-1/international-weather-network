@@ -2,11 +2,13 @@
 
   python make_brand_motion.py            -> brand-kit/motion/*  (+ brand-kit/graphics/*.png)
   python make_brand_motion.py --preview  -> brand-kit/styleframes/motion/*.png stills for review (fast)
+  python make_brand_motion.py --box      -> only the window looks' chrome + wipes (after a host_box.PRESETS change)
 
 Outputs:
-  graphics/bug.png, graphics/box_chrome.png  full-frame transparent PNGs (static)
+  graphics/bug.png       full-frame transparent PNG (static)
+  graphics/box_chrome_<look>.png  window chrome per look (host_box.PRESETS) incl. its shadow margin (host_box.chrome_rect)
   motion/wipe_full.mov   0.8 s full-frame alpha wipe; fully covered 0.34-0.46 s (switch layouts at 0.40 s)
-  motion/wipe_box.mov    0.6 s alpha wipe for the desk window, 720x405 placed at 1160,40; covered ~0.25-0.35 s (switch at 0.30 s)
+  motion/wipe_box_<look>.mov  0.6 s alpha wipe at the window size, placed at its rect; covered ~0.25-0.35 s (switch at 0.30 s)
   motion/sting.mov       4.2 s full-frame alpha intro sting; covered 0.55-3.45 s
   motion/end_bg.mp4      30 s opaque animated end-screen background
   motion/end_fg.mov      30 s alpha end-screen foreground (host frame at 80,250 896x504 + 2 video slots + subscribe slot)
@@ -20,19 +22,38 @@ from scipy.signal import butter, sosfilt
 
 sys.path.insert(0, str(Path(__file__).parent))
 from motion import render_jobs
+from host_box import FX, PRESETS, CHROME_AT, chrome_clip, chrome_src, rect, wipe_src
 
 CWD = Path(__file__).resolve().parents[1]
 BK = CWD / "brand-kit"; HTML = "brand-kit/src/overlays.html"
 WIPE_FULL = {"dur": 0.8, "switch": 0.40}
-WIPE_BOX = {"dur": 0.6, "switch": 0.30, "rect": [1160, 40, 720, 405]}
+WIPE_BOX = {"dur": 0.6, "switch": 0.30}                      # one per window look, placed at the window's rect
 STING = {"dur": 4.2, "covered": [0.55, 3.45]}
+
+
+def box_jobs():
+    """Per window look (host_box.PRESETS): chrome PNG with its shadow margin, and the 0.6 s wipe at that size."""
+    J = []
+    for k, p in PRESETS.items():
+        w, h = p["w"], p["h"]
+        J.append({"html": HTML, "data": {"kind": "chrome", "x": CHROME_AT[0], "y": CHROME_AT[1], "w": w, "h": h},
+                  "out": chrome_src(k), "dur": 0, "alpha": True, "clip": chrome_clip(k)})
+        r = rect(k, "TR")
+        J.append({"html": HTML, "data": {"kind": "wipe_box", "dur": WIPE_BOX["dur"], "x": r[0], "y": r[1], "w": w, "h": h},
+                  "out": wipe_src(k), "dur": WIPE_BOX["dur"], "clip": r, "alpha": True})
+        for fx, spec in FX.items():                                  # the other cover transitions (owner 6 Nov)
+            if spec["type"] == "cover" and fx != "panel":
+                J.append({"html": HTML, "data": {"kind": f"box_{fx}", "dur": WIPE_BOX["dur"], "x": r[0], "y": r[1], "w": w, "h": h},
+                          "out": wipe_src(k, fx), "dur": WIPE_BOX["dur"], "clip": r, "alpha": True})
+    return J
 
 
 def jobs(preview=False):
     J = []
     J.append({"html": HTML, "data": {"kind": "bug"}, "out": "brand-kit/graphics/bug.png", "dur": 0, "alpha": True})
-    J.append({"html": HTML, "data": {"kind": "chrome"}, "out": "brand-kit/graphics/box_chrome.png", "dur": 0, "alpha": True})
     J.append({"html": HTML, "data": {"kind": "end_plate"}, "out": "brand-kit/graphics/end_plate.png", "dur": 0, "alpha": False, "clip": [80, 250, 896, 504]})
+    if not preview:
+        J += box_jobs()
     if preview:
         P = "brand-kit/styleframes/motion/"
         J += [{"html": HTML, "data": {"kind": "wipe_full", "dur": .8}, "out": P + f"wipe_full_{t}.png", "dur": 0, "t": t, "alpha": True} for t in (0.2, 0.4)]
@@ -41,8 +62,6 @@ def jobs(preview=False):
         J.append({"html": HTML, "data": {"kind": "end_fg", "dur": 30}, "out": P + "end_fg.png", "dur": 0, "t": 5, "alpha": True})
         return J
     J.append({"html": HTML, "data": {"kind": "wipe_full", "dur": WIPE_FULL["dur"]}, "out": "brand-kit/motion/wipe_full.mov", "dur": WIPE_FULL["dur"], "alpha": True})
-    J.append({"html": HTML, "data": {"kind": "wipe_box", "dur": WIPE_BOX["dur"], "w": WIPE_BOX["rect"][2], "h": WIPE_BOX["rect"][3]}, "out": "brand-kit/motion/wipe_box.mov", "dur": WIPE_BOX["dur"],
-              "clip": WIPE_BOX["rect"], "alpha": True})
     J.append({"html": HTML, "data": {"kind": "sting", "dur": STING["dur"]}, "out": "brand-kit/motion/sting.mov", "dur": STING["dur"], "alpha": True})
     J.append({"html": HTML, "data": {"kind": "end_bg", "dur": 30}, "out": "brand-kit/motion/end_bg.mp4", "dur": 30, "alpha": False})
     J.append({"html": HTML, "data": {"kind": "end_fg", "dur": 30}, "out": "brand-kit/motion/end_fg.mov", "dur": 30, "alpha": True, "static": [1.6, 30]})
@@ -83,6 +102,26 @@ def whoosh(dur=0.8, gain=0.32, seed=3, f0=250, f1=2600, pan=True):
     return np.stack([L, R], 1) * gain
 
 
+def ping(dur=0.9, gain=0.22):
+    """radar blip: two soft sine partials with a fast decay + a quiet echo; under a small whoosh so the cover reads as motion."""
+    n = int(dur * SR); t = np.arange(n) / SR
+    y = (np.sin(2 * np.pi * 1320 * t) + 0.45 * np.sin(2 * np.pi * 1980 * t)) * np.exp(-t * 9) * np.minimum(1, t / 0.004)
+    k = int(0.16 * SR); y[k:] += 0.35 * y[:-k]
+    y /= np.abs(y).max() + 1e-9
+    s = np.stack([y, y], 1) * gain
+    wsh = whoosh(0.6, 0.10, seed=12, f0=600, f1=3200); s[:len(wsh)] += wsh
+    return s
+
+
+def tick(dur=0.35, gain=0.20):
+    """soft UI tick: short band-passed click + a low sine body."""
+    n = int(dur * SR); t = np.arange(n) / SR
+    click = sosfilt(butter(2, [1800, 7000], btype="band", fs=SR, output="sos"), _noise(n, 21)) * np.exp(-t * 90)
+    body = np.sin(2 * np.pi * 210 * t) * np.exp(-t * 22) * 0.6
+    y = click + body; y /= np.abs(y).max() + 1e-9
+    return np.stack([y, y], 1) * gain
+
+
 def hit(dur=2.2, gain=0.5):
     n = int(dur * SR); t = np.arange(n) / SR
     f = 62 * np.exp(-t * 1.8) + 38                                              # sub thump gliding down
@@ -103,6 +142,7 @@ def sfx():
     w = lambda name, a: wavfile.write(out / name, SR, (np.clip(a, -1, 1) * 32767).astype(np.int16))
     w("whoosh.wav", whoosh(0.8, 0.30))
     w("whoosh_small.wav", whoosh(0.6, 0.16, seed=5, f0=500, f1=3800))
+    w("ping.wav", ping()); w("tick.wav", tick())                     # radar / rise window transitions
     n = int(STING["dur"] * SR); s = np.zeros((n, 2))
     def put(a, at):
         k = int(at * SR); s[k:k + len(a)] += a[: n - k]
@@ -112,6 +152,11 @@ def sfx():
 
 if __name__ == "__main__":
     prev = "--preview" in sys.argv
+    if "--box" in sys.argv:                                        # only the window looks' chrome + wipes
+        for o in render_jobs(box_jobs(), workers=4):
+            print(o)
+        sfx(); print("sfx ok")                                     # deterministic; adds the transition sounds
+        sys.exit(0)
     for o in render_jobs(jobs(prev), workers=4):
         print(o)
     if not prev:

@@ -6,8 +6,9 @@
 Outputs (host/):
   host_meta.json   fps (project fps follows HeyGen: 25 -> 25, 24 -> 24, else 30), duration, crop rects, loudness
   host_full.mp4    1920x1080 full-frame host (no audio)
-  host_box.mp4     720x405 head-shoulders-chest crop for the Desk Window (no audio)
-  host_end.mp4     896x504 slightly wider crop for the end screen (no audio)
+  host_box.mp4     'main' Desk Window crop (host_box.PRESETS: 640x360, head to upper chest, no hands) (no audio)
+  host_box_A/B/C.mp4  the smaller, tighter window looks (608x342 / 576x324 / 544x306)
+  host_end.mp4     896x504 end-screen crop, same framing as main (no hands) (no audio)
   vo.wav           voice: rumble cut, light presence EQ, gentle compression, two-pass loudnorm -16 LUFS / -1.5 dBTP
 The crop is placed from OpenCV face detection over 7 frames (median face box); fallback = studio-still framing.
 """
@@ -18,6 +19,7 @@ from pathlib import Path
 CWD = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).parent))
 from enc import h264
+from host_box import PRESETS
 YUNET = Path(__file__).parent / "models/face_detection_yunet_2023mar.onnx"
 YUNET_URL = "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
 STILL = CWD / "brand-kit/host/glenn-studio-16x9.png"
@@ -84,9 +86,11 @@ def face_rects(raw, info):
             boxes.append([float(b[0]), float(b[1]), float(b[2]), float(b[3])])
     cap.release()
     W, H = info["w"], info["h"]
-    if not boxes:                                                # fallback: framing measured on the studio still
-        return {"box": [0, 0, W, H], "end": None, "face": None}
-    x, y, w, h = (statistics.median(b[i] for b in boxes) for i in range(4))
+    found = bool(boxes)
+    if found:
+        x, y, w, h = (statistics.median(b[i] for b in boxes) for i in range(4))
+    else:                                                        # fallback: Glenn's face as measured on the studio still
+        x, y, w, h = 0.419 * W, 0.104 * H, 0.156 * W, 0.400 * H
     cx = x + w / 2
 
     def rect(scale, head_room):
@@ -95,7 +99,9 @@ def face_rects(raw, info):
         if top + ch > H:
             top = H - ch
         return [round(left), round(top), round(cw / 2) * 2, round(ch / 2) * 2]
-    return {"box": rect(6.2, 0.9), "end": rect(6.2, 0.9), "face": [round(x), round(y), round(w), round(h)]}   # head + shoulders + chest (owner 4 Nov)
+    return {"box": {k: rect(p["crop"], 0.9) for k, p in PRESETS.items()},                # main = 4 Nov wide crop; A/B/C tighter (6 Nov)
+            "end": rect(PRESETS["main"]["crop"], 0.9),                                        # end screen: same no-hands framing as main
+            "face": [round(x), round(y), round(w), round(h)] if found else None}
 
 
 def vo(raw, out):
@@ -115,18 +121,20 @@ def main():
     raw = ep / "host/glenn_raw.mp4"
     info = probe(raw)
     fps = 25 if abs(info["fps"] - 25) < .5 else 24 if abs(info["fps"] - 24) < .5 else 30
-    R = face_rects(raw, info); end = R["end"] or R["box"]
+    R = face_rects(raw, info); end = R["end"]
     enc = ["-an", *h264("inter"), "-pix_fmt", "yuv420p", "-g", str(fps * 2)]
     full_vf = f"scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=0x050C1A,fps={fps}"
     crop = lambda r, w, h: f"crop={r[2]}:{r[3]}:{r[0]}:{r[1]},scale={w}:{h}:flags=lanczos,unsharp=5:5:0.4,fps={fps}"
     jobs = [["ffmpeg", "-v", "error", "-y", "-i", raw, "-vf", full_vf, *enc, ep / "host/host_full.mp4"],
-            ["ffmpeg", "-v", "error", "-y", "-i", raw, "-vf", crop(R["box"], 720, 405), *enc, ep / "host/host_box.mp4"],
             ["ffmpeg", "-v", "error", "-y", "-i", raw, "-vf", crop(end, 896, 504), *enc, ep / "host/host_end.mp4"]]
-    with ThreadPoolExecutor(4) as ex:
+    for k, p in PRESETS.items():
+        out = ep / ("host/host_box.mp4" if k == "main" else f"host/host_box_{k}.mp4")
+        jobs.append(["ffmpeg", "-v", "error", "-y", "-i", raw, "-vf", crop(R["box"][k], p["w"], p["h"]), *enc, out])
+    with ThreadPoolExecutor(6) as ex:
         futs = [ex.submit(sh, j) for j in jobs] + [ex.submit(vo, raw, ep / "host/vo.wav")]
         lufs_in = [f.result() for f in futs][-1]
     meta = {"raw": "host/glenn_raw.mp4", "raw_w": info["w"], "raw_h": info["h"], "raw_fps": info["fps"], "fps": fps,
-            "dur": probe_audio(ep / "host/vo.wav"), "box_rect_src": R["box"], "end_rect_src": end, "face": R["face"],
+            "dur": probe_audio(ep / "host/vo.wav"), "box_rect_src": R["box"]["main"], "box_rects_src": R["box"], "end_rect_src": end, "face": R["face"],
             "vo_input_lufs": lufs_in, "standin": (ep / "host/_standin_voice.mp3").exists()}
     (ep / "host/host_meta.json").write_text(json.dumps(meta, indent=2))
     print(json.dumps(meta, indent=2))

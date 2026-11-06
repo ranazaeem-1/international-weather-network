@@ -8,6 +8,7 @@ Reads   <episode_dir>/script/script.md                   (format: docs/script-gu
 Writes  <episode_dir>/script/heygen_paste.txt             THE one script the owner pastes into HeyGen (owner, 4 Nov:
                                                           "it needs to be one script"), one paragraph per section
         <episode_dir>/script/sections.json                schema: docs/timeline-schema.md section 1
+        <episode_dir>/script/pinned_comment.txt           front matter 'pinned_comment' (the list/links a 'pinned' CTA points to)
         (--parts also writes heygen_paste_partNN.txt <= 4,500 chars, only if HeyGen ever refuses the full length)
 Runtime cap: the finished video must be 12:00 or less (owner, 4 Nov): words / carver_wpm + nat-sound breaks + end tail.
 
@@ -45,7 +46,16 @@ HEAD_MAX, SUB_MAX, TICKER_MAX = 40, 90, 90
 
 LAYOUTS = ("box+footage", "box+map", "box+card", "full-host")
 KICKERS = ("WEATHER ALERT", "DEVELOPING", "FORECAST", "AFTERMATH")
-CTA_KINDS = ("share", "comment", "subscribe")
+# CTA beats (owner 6 Nov: "add CTA so we get more subs and engagement, but not typical"); guide section 6.
+#   report    S02 desk-report invite (comment: town + what you see; best ones read next update). Allowed from the name line.
+#   pinned    the long list / links live in the pinned comment     share     send it to ONE person in the window
+#   subscribe for the next answer (after certain vs uncertain)  question  one-word question of the day (S12)
+#   comment   a specific comment ask (check-in, measurement)       endscreen no card: starts the end screen (watch next)
+CTA_KINDS = ("report", "pinned", "share", "subscribe", "question", "comment", "endscreen")
+CTA_NO_CARD = {"endscreen"}
+CTA_EARLY_OK = {"report"}          # the desk-report invite sits in S02, right after the name line
+CTA_MAX_ASKS, CTA_MIN_GAP = 6, 75.0                     # asks per episode; seconds between two asks
+CTA_PLAN = [("report",), ("share",), ("subscribe",), ("question", "comment")]   # every full episode has these beats
 SECTION_KEYS = {"layout", "strap", "ticker", "visual", "cta", "natsound_after", "pause", "cue",
                 "facts", "spoken", "notes"}
 
@@ -68,6 +78,8 @@ BANNED = ["delve", "dive in", "dive into", "in today's video", "it's important t
           "you won't believe", "mother nature", "brace yourselves", "calm before the storm", "smash that",
           "hit the bell", "where are you watching from", "it really helps the channel",
           "if this video helped you", "and it came at a cost", "but that was just the beginning",
+          "like and subscribe", "don't forget to subscribe", "hit subscribe", "ring the bell", "turn on the bell",
+          "if you enjoyed this video", "if you're new here", "consider subscribing", "drop a like",
           "as you can see", "basically", "game-changer"]
 
 
@@ -316,7 +328,7 @@ def parse_cta(val, sid, rep):
     for p in [x.strip() for x in fix_quotes(val).split("|") if x.strip()]:
         m = re.fullmatch(r"(\w+)\s*@\s*\"([^\"]+)\"", p)
         if not m or m.group(1) not in CTA_KINDS:
-            rep.err(sid, f"cta: cannot read '{p}' (use share|comment|subscribe @ \"words\")")
+            rep.err(sid, f"cta: cannot read '{p}' (use {'|'.join(CTA_KINDS)} @ \"words\")")
             continue
         out.append({"kind": m.group(1), "at": m.group(2)})
     return out
@@ -385,10 +397,10 @@ def lint(ep, demo):
         rep.warn("front matter", "--demo used on a script without sample: true")
     cta_copy = fm.get("cta_copy") or {}
     if not isinstance(cta_copy, dict):
-        rep.err("front matter", "cta_copy must map share/comment/subscribe to {head, sub}")
+        rep.err("front matter", "cta_copy must map each CTA kind used to {head, sub}")
         cta_copy = {}
     for k, v in cta_copy.items():
-        if k not in CTA_KINDS:
+        if k not in CTA_KINDS or k in CTA_NO_CARD:
             rep.err("front matter", f"cta_copy: unknown kind '{k}'")
         elif not (isinstance(v, dict) and isinstance(v.get("head"), str) and isinstance(v.get("sub"), str)):
             rep.err("front matter", f"cta_copy.{k} needs 'head' and 'sub' strings")
@@ -510,7 +522,7 @@ def lint(ep, demo):
         start_w[s["id"]] = acc
         acc += s["words"]
     est = lambda sid, w: (start_w[sid] + w) / wpm * 60.0
-    full_host_secs, name_found = [], False
+    full_host_secs, name_found, cta_times = [], False, []
     all_tokens = []
     for s in secs:
         all_tokens += norm_tokens(s["spoken"])
@@ -576,11 +588,14 @@ def lint(ep, demo):
 
         # CTA
         for c in s["cta"]:
-            if c["kind"] not in cta_copy:
+            if c["kind"] not in cta_copy and c["kind"] not in CTA_NO_CARD:
                 rep.err(sid, f"cta: '{c['kind']}' has no cta_copy entry in the front matter")
             r = pos(c["at"], f"cta {c['kind']}")
-            if r and est(sid, r[0]) < CTA_EARLIEST:
-                rep.soft(sid, f"position: {c['kind']} CTA at about {mmss(est(sid, r[0]))} (nothing before {mmss(CTA_EARLIEST)})")
+            if r:
+                cta_times.append((est(sid, r[0]), c["kind"], sid))
+                floor = NAME_LINE_WINDOW[0] if c["kind"] in CTA_EARLY_OK else CTA_EARLIEST
+                if c["kind"] not in CTA_NO_CARD and est(sid, r[0]) < floor:
+                    rep.soft(sid, f"position: {c['kind']} CTA at about {mmss(est(sid, r[0]))} (nothing before {mmss(floor)})")
 
         # pauses
         for p in s["pause"]:
@@ -617,6 +632,22 @@ def lint(ep, demo):
 
     if not name_found:
         rep.warn("script", f"name line not found: \"{NAME_LINE}.\"")
+    # CTA plan (guide section 6): varied beats, spaced out, never a pile-up
+    asks = sorted(c for c in cta_times if c[1] not in CTA_NO_CARD)
+    if len(asks) > CTA_MAX_ASKS:
+        rep.err("script", f"{len(asks)} CTA asks (max {CTA_MAX_ASKS})")
+    for (t0, k0, s0), (t1, k1, s1) in zip(asks, asks[1:]):
+        if t1 - t0 < CTA_MIN_GAP:
+            rep.warn(s1, f"CTA {k1} only {t1 - t0:.0f} s after {k0} ({s0}); keep asks {CTA_MIN_GAP:.0f} s apart")
+    kinds = [k for _, k, _ in asks]
+    if "pinned" in kinds and not str(fm.get("pinned_comment") or "").strip():
+        rep.err("front matter", "a pinned CTA needs 'pinned_comment: |' (the text the owner pins; build writes script/pinned_comment.txt)")
+    for need in CTA_PLAN:
+        if not any(k in need for k in kinds):
+            rep.soft("script", f"CTA plan: no {' or '.join(need)} beat (guide section 6)")
+    for k in set(kinds):
+        if kinds.count(k) > (2 if k == "comment" else 1):
+            rep.soft("script", f"CTA plan: {kinds.count(k)} x {k}; vary the beats (guide section 6)")
     if len(full_host_secs) > FULL_HOST_MAX_SECTIONS:
         rep.err("script", f"full-host in {len(full_host_secs)} sections ({', '.join(full_host_secs)}); max {FULL_HOST_MAX_SECTIONS}")
     npause = sum(len(s["pause"]) for s in secs)
@@ -704,6 +735,10 @@ def build(ep, model):
         json.dump(sections_json(model), fh, ensure_ascii=False, indent=2)
         fh.write("\n")
     written.append(("sections.json", f"{len(model['secs'])} sections"))
+    pin = (model["fm"].get("pinned_comment") or "").strip()            # the pinned comment the script points to (owner posts it)
+    if pin:
+        write(os.path.join(sd, "pinned_comment.txt"), pin)
+        written.append(("pinned_comment.txt", f"{len(pin):,} chars"))
     return written
 
 

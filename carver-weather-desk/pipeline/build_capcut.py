@@ -265,6 +265,21 @@ def main():
                                                                 scale_y=sy, transform_x=tx, transform_y=ty))
             if sx != sy:
                 seg.uniform_scale = False
+            # Desk Window 'slide'/'rise' transitions: pixel-offset keys -> CapCut position keyframes (half-canvas units, y up),
+            # alpha_in/alpha_out -> opacity keyframes. compose.py interpolates the same keys linearly, so MP4 and draft match.
+            for keys, prop, base, k in ((it.get("kf_x"), cc.KeyframeProperty.position_x, tx, 1 / (W / 2)),
+                                        (it.get("kf_y"), cc.KeyframeProperty.position_y, ty, -1 / (H / 2))):
+                for kt, v in keys or []:
+                    seg.add_keyframe(prop, min(dur, us(float(kt))), base + float(v) * k)
+            ai, ao = float(it.get("alpha_in", 0) or 0), float(it.get("alpha_out", 0) or 0)
+            if ai or ao:
+                akf = {}
+                if ai:
+                    akf.update({0: 0.0, us(ai): 1.0})
+                if ao:
+                    akf.update({dur - us(ao): 1.0, dur: 0.0})
+                for off, v in sorted(akf.items()):
+                    seg.add_keyframe(cc.KeyframeProperty.alpha, off, v)
             fi, fo = max(0.0, float(it.get("fade_in", 0) or 0)), max(0.0, float(it.get("fade_out", 0) or 0))
             if (fi or fo) and not still:
                 if not has_audio[p]:

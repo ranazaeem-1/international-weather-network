@@ -52,7 +52,10 @@ python pipeline/cards_sheet.py <sheet.jpg> <dir-or-pngs...>       # contact shee
 ## 3. Reserved zones and motion rules (enforced by the templates)
 
 **Reserved zones:**
-- Host box: x ≥ 1130, y ≤ 475 (720×405 window since 4 Nov). The title block's `max-width` is 1040.
+- Host box: x ≥ 1130, y ≤ 475. The window was 720×405 from 4 Nov; since 6 Nov main is 640×360 at x 1240, which leaves room to spare. The title block's `max-width` is 1040.
+  - Since 6 Nov the window comes and goes, and it is OFF for each card's first 5 s.
+  - When it appears over a card, it is always top right: main or a smaller look, all inside this zone.
+  - So keep this zone clear exactly as before (`pipeline/host_box.py`).
 - Bug: x ≤ 420, y ≤ 120. Titles start at y 132.
 - Ticker: y ≥ 1014. Content ends by y 1000.
 - Strap (`strap_clear: true` only): x < 1320, y > 820.

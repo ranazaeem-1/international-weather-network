@@ -53,6 +53,17 @@ def vsize(path):
     return _size_cache[path]
 
 
+def kf_expr(keys, start):
+    """Piecewise-linear ffmpeg expression of overlay time t for [[t_item, value]] keys (item starts at chunk time `start`).
+    Linear between keys, held before the first and after the last: the same interpolation CapCut uses for keyframes."""
+    T = f"(t-({start:.4f}))"; ks = sorted(keys)
+    e = f"{ks[-1][1]}"
+    for (t0, v0), (t1, v1) in reversed(list(zip(ks, ks[1:]))):
+        seg = f"{v0}" if t1 - t0 < 1e-6 else f"({v0}+({v1}-({v0}))*({T}-{t0})/{t1 - t0:.4f})"
+        e = f"if(lt({T},{t1}),{seg},{e})"
+    return f"if(lt({T},{ks[0][0]}),{ks[0][1]},{e})"
+
+
 def chunk_cmd(tl, f0, f1, out):
     fps = tl["fps"]; a, b = f0 / fps, f1 / fps; n = f1 - f0
     args, filt, k, cur = [], [f"color=c=0x050C1A:s=1920x1080:r={fps}:d={n / fps:.4f},format=yuv444p[c0]"], 0, "c0"
@@ -90,9 +101,21 @@ def chunk_cmd(tl, f0, f1, out):
             fiv = it.get("fade_in_video", 0)
             if fiv and seg0 - s0 < fiv:
                 chain += ["format=yuva444p", f"fade=t=in:st={max(0.0, off - (seg0 - s0)):.4f}:d={fiv}:alpha=1"]
+            ai, ao = float(it.get("alpha_in", 0) or 0), float(it.get("alpha_out", 0) or 0)   # window 'rise' transition
+            tin = seg0 - s0                                                             # item time at this input's t = 0
+            if (ai and tin < ai) or (ao and seg1 > s1 - ao):
+                fa = []
+                if ai and tin < ai:
+                    fa.append(f"clip((T+{tin:.4f})/{ai},0,1)")
+                if ao and seg1 > s1 - ao:
+                    fa.append(f"clip(({s1 - s0:.4f}-(T+{tin:.4f}))/{ao},0,1)")
+                en = "+".join(([f"lt(t+{tin:.4f},{ai})"] if ai else []) + ([f"gt(t+{tin:.4f},{s1 - s0 - ao:.4f})"] if ao else []))
+                chain += ["format=yuva444p", f"geq=lum='lum(X,Y)':cb='cb(X,Y)':cr='cr(X,Y)':a='alpha(X,Y)*{'*'.join(fa)}':enable='{en}'"]
             chain.append(f"setpts=PTS-STARTPTS+{off:.4f}/TB")
             filt.append(f"[{k}:v]{','.join(chain)}[v{k}]")
-            filt.append(f"[{cur}][v{k}]overlay=x={x}:y={y}:eof_action=pass:format=yuv444[c{k + 1}]")
+            ox = f"'{x}+{kf_expr(it['kf_x'], s0 - a)}'" if it.get("kf_x") else x       # window 'slide'/'rise' keyframes
+            oy = f"'{y}+{kf_expr(it['kf_y'], s0 - a)}'" if it.get("kf_y") else y
+            filt.append(f"[{cur}][v{k}]overlay=x={ox}:y={oy}:eof_action=pass:format=yuv444[c{k + 1}]")
             cur = f"c{k + 1}"; k += 1
     filt.append(f"[{cur}]format=yuv420p,setsar=1[out]")
     return ["ffmpeg", "-v", "error", "-y", *args, "-filter_complex", ";".join(filt), "-map", "[out]", "-frames:v", str(n), "-r", str(fps),
